@@ -109,6 +109,13 @@ export default function UrlInput() {
     try {
       const result = await analyzeMedia(url.trim(), controller.signal)
       if (pending.current !== operation) return
+      // Derive initial Format from what the analyzer found
+      const avail = result.available_formats ?? []
+      const initialFormat =
+        avail.includes('video') ? 'VIDEO' :
+        avail.includes('audio') ? 'MP3' :
+        avail.includes('image') ? 'IMAGE' : 'VIDEO'
+      setFormat(initialFormat)
       setMedia(result)
       setPhase('result')
     } catch (error) {

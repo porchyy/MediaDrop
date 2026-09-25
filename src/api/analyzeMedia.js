@@ -10,7 +10,11 @@ export async function analyzeMedia(url, signal) {
   if (!response.ok) {
     throw Object.assign(new Error(data.message || 'Analyze failed'), { code: data.code })
   }
-  if (typeof data.title !== 'string' || !Number.isInteger(data.duration) || data.duration < 0 || typeof data.type !== 'string') {
+  if (
+    typeof data.title !== 'string' ||
+    typeof data.media_type !== 'string' ||
+    (data.duration !== null && (!Number.isInteger(data.duration) || data.duration < 0))
+  ) {
     throw new Error('Invalid Analyze response')
   }
   return data

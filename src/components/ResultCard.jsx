@@ -1,12 +1,16 @@
 import { Download, Image, Music, Video } from 'lucide-react'
 
-const formats = {
-  MP3: { icon: Music, heading: 'AUDIO QUALITY', choices: ['128 kbps', '192 kbps', '320 kbps'], initial: '192 kbps' },
-  VIDEO: { icon: Video, heading: 'VIDEO QUALITY', choices: ['720p', '1080p', 'Best'], initial: 'Best' },
-  IMAGE: { icon: Image, heading: 'IMAGE FORMAT', choices: ['JPG', 'PNG', 'Original'], initial: 'Original' },
+const FORMAT_DEFS = {
+  MP3:   { icon: Music, heading: 'AUDIO QUALITY',  choices: ['128 kbps', '192 kbps', '320 kbps'], initial: '192 kbps', availKey: 'audio'  },
+  VIDEO: { icon: Video, heading: 'VIDEO QUALITY',  choices: ['720p', '1080p', 'Best'],             initial: 'Best',      availKey: 'video'  },
+  IMAGE: { icon: Image, heading: 'IMAGE FORMAT',   choices: ['JPG', 'PNG', 'Original'],            initial: 'Original',  availKey: 'image'  },
 }
 
-const mediaDuration = seconds => `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
+// Duration in seconds → "mm:ss", or "--:--" when null
+const mediaDuration = seconds =>
+  seconds === null
+    ? '--:--'
+    : `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
 
 export default function ResultCard({
   phase,
@@ -21,18 +25,30 @@ export default function ResultCard({
   onDemoDownload,
   onClear,
 }) {
+  // Only show Format buttons whose output type is in available_formats
+  const availableKeys = media.available_formats ?? ['video', 'audio', 'image']
+  const visibleFormats = Object.entries(FORMAT_DEFS).filter(
+    ([, def]) => availableKeys.includes(def.availKey),
+  )
+
   return (
     <section className="result-section" aria-label="Analysis result">
-      <p className="result-heading" ref={headingRef}>{phase === 'result' ? 'RESULT' : phase === 'preparing' ? 'PREPARING' : 'DEMO READY'}</p>
+      <p className="result-heading" ref={headingRef}>
+        {phase === 'result' ? 'RESULT' : phase === 'preparing' ? 'PREPARING' : 'DEMO READY'}
+      </p>
       <div className="result-card pixel-border">
         <span className="demo-badge">DEMO PREVIEW</span>
         <div className="result-media">
-          <div className="result-thumbnail" role="img" aria-label="Demo cover image">
-            <Image size={34} strokeWidth={1.5} aria-hidden="true" />
+          <div className="result-thumbnail" role="img" aria-label="Media cover image">
+            {media.thumbnail
+              ? <img src={media.thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : <Image size={34} strokeWidth={1.5} aria-hidden="true" />}
           </div>
           <div>
             <h2 className="result-title">{media.title}</h2>
-            <p className="result-meta">{mediaDuration(media.duration)} · {media.type.toUpperCase()}</p>
+            <p className="result-meta">
+              {mediaDuration(media.duration)} · {(media.media_type ?? media.type ?? '').toUpperCase()}
+            </p>
           </div>
         </div>
 
@@ -41,13 +57,13 @@ export default function ResultCard({
             <fieldset className="result-fieldset">
               <legend>FORMAT</legend>
               <div className="result-options">
-                {Object.entries(formats).map(([name, { icon: Icon }]) => (
+                {visibleFormats.map(([name, { icon: Icon }]) => (
                   <button
                     key={name}
                     className={`result-option${format === name ? ' result-option--active' : ''}`}
                     type="button"
                     aria-pressed={format === name}
-                    onClick={() => onFormatChange(name, formats[name].initial)}
+                    onClick={() => onFormatChange(name, FORMAT_DEFS[name].initial)}
                   >
                     <Icon size={16} aria-hidden="true" />
                     {name}
@@ -58,9 +74,9 @@ export default function ResultCard({
             </fieldset>
 
             <fieldset className="result-fieldset">
-              <legend>{formats[format].heading}</legend>
+              <legend>{FORMAT_DEFS[format].heading}</legend>
               <div className="result-options">
-                {formats[format].choices.map(choice => (
+                {FORMAT_DEFS[format].choices.map(choice => (
                   <button
                     key={choice}
                     className={`result-option${quality === choice ? ' result-option--active' : ''}`}
