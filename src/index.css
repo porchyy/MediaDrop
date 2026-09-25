@@ -2,18 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── CSS Variables — Pixel Palette ─────────────────────── */
+/* ─── CSS Variables — Pixel Palette & Typography ─────────── */
 :root {
   --bg: #f0f0f0;
   --surface: #ffffff;
   --accent: #4f46e5;
   --border: #4f46e5;
+  --border-subtle: rgba(79, 70, 229, 0.25);
   --text: #1e1b4b;
   --muted: #4b5563;        /* improved contrast for light mode */
   --shadow: #1e1b4b;
   --card-bg: #e8e8f0;
   --on-accent: #ffffff;
   --error: #b42318;
+  --font-sans: 'IBM Plex Sans Thai', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-pixel: 'Press Start 2P', monospace;
 }
 
 .dark {
@@ -21,6 +24,7 @@
   --surface: #1a1a2e;
   --accent: #818cf8;
   --border: #818cf8;
+  --border-subtle: rgba(129, 140, 248, 0.25);
   --text: #e2e8f0;
   --muted: #94a3b8;        /* improved contrast for dark mode */
   --shadow: #000000;
@@ -42,7 +46,7 @@ body {
   margin: 0;
   background-color: var(--bg);
   color: var(--text);
-  font-family: 'Courier New', Courier, monospace;
+  font-family: var(--font-sans);
   transition: background-color 0.2s ease, color 0.2s ease;
   min-height: 100vh;
 }
@@ -142,15 +146,16 @@ body {
 /* ─── Pixel Input ────────────────────────────────────────── */
 .pixel-input {
   width: 100%;
+  min-height: 3.5rem;
   background-color: var(--surface);
   color: var(--text);
   border: 2px solid var(--border);
   box-shadow: 4px 4px 0 var(--shadow);
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 1rem;
-  padding: 1rem 1.25rem;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  padding: 0.85rem 5.5rem 0.85rem 1.25rem;
   outline: none;
-  transition: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .pixel-input::placeholder {
@@ -170,18 +175,24 @@ body {
   right: 8px;
   top: 50%;
   transform: translateY(-50%);
-  border: 2px solid var(--border);
-  box-shadow: 2px 2px 0 var(--shadow);
-  background-color: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 1px 1px 0 var(--shadow);
+  background-color: var(--card-bg);
   color: var(--accent);
-  padding: 0.3rem 0.35rem;
-  min-width: 2.75rem;
-  min-height: 2.75rem;
+  padding: 0.4rem 0.65rem;
+  height: 2.5rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: none;
+  gap: 0.35rem;
+  transition: all 0.15s;
+}
+
+.paste-text {
+  font-family: var(--font-pixel);
+  font-size: 0.55rem;
+  letter-spacing: 0.05em;
 }
 
 .theme-toggle { min-width: 2.75rem; min-height: 2.75rem; }
@@ -192,7 +203,7 @@ body {
 }
 
 .paste-btn:active {
-  box-shadow: 1px 1px 0 var(--shadow);
+  box-shadow: none;
   transform: translateY(-50%) translate(1px, 1px);
 }
 
@@ -275,91 +286,181 @@ body {
 }
 
 .result-card {
-  gap: 1.5rem;
+  gap: 1.25rem;
   padding: 1.5rem;
   background: var(--surface);
 }
 
-.demo-badge {
-  align-self: flex-start;
-  border: 1px solid var(--border);
-  color: var(--accent);
-  font-size: 0.7rem;
-  font-weight: bold;
-  padding: 0.3rem 0.5rem;
-}
-
-.result-media {
+/* 16:9 Prominent Thumbnail Hero */
+.result-thumbnail-hero {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--border-subtle);
+  background: repeating-linear-gradient(45deg, var(--card-bg) 0 12px, var(--surface) 12px 24px);
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 1rem;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
 }
 
-.result-media > div:last-child { flex: 1; min-width: 0; }
+.result-hero-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
 
-.result-thumbnail {
-  width: 7.5rem;
-  height: 5.5rem;
-  flex: none;
-  display: grid;
-  place-items: center;
-  border: 2px solid var(--border);
-  box-shadow: 3px 3px 0 var(--shadow);
-  background: repeating-linear-gradient(45deg, var(--card-bg) 0 12px, var(--surface) 12px 24px);
+.audio-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
   color: var(--accent);
+}
+
+.audio-placeholder-label {
+  font-family: var(--font-pixel);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.image-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+}
+
+/* Result Info & Hierarchy */
+.result-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .result-title {
-  margin: 0 0 0.5rem;
+  margin: 0;
   color: var(--text);
-  font-family: 'Press Start 2P', monospace;
-  font-size: 0.75rem;
-  line-height: 1.7;
+  font-family: var(--font-sans);
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.5;
   overflow-wrap: anywhere;
 }
 
-.result-meta { margin: 0; color: var(--muted); }
+.result-meta-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.result-meta {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.detected-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-pixel);
+  font-size: 0.55rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  background: rgba(79, 70, 229, 0.12);
+  padding: 0.25rem 0.55rem;
+  border: 1px solid var(--border-subtle);
+}
+
+.dark .detected-badge {
+  background: rgba(129, 140, 248, 0.15);
+}
+
+.detected-dot {
+  color: #10b981;
+  font-size: 0.55rem;
+  line-height: 1;
+}
+
 .result-finish {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  border-top: 2px solid var(--border);
+  border-top: 1px solid var(--border-subtle);
   padding-top: 1.25rem;
 }
-.result-summary { margin: 0; color: var(--text); text-align: center; font-weight: bold; }
-.result-fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
-.result-fieldset legend {
-  margin-bottom: 0.75rem;
+
+.result-summary {
+  margin: 0;
   color: var(--text);
-  font-family: 'Press Start 2P', monospace;
-  font-size: 0.6rem;
+  font-family: var(--font-sans);
+  text-align: center;
+  font-weight: 600;
 }
 
-.result-options { display: flex; flex-wrap: wrap; gap: 0.65rem; }
+.result-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.result-fieldset legend {
+  margin-bottom: 0.65rem;
+  color: var(--text);
+  font-family: var(--font-pixel);
+  font-size: 0.6rem;
+  letter-spacing: 0.05em;
+}
+
+.result-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
 .result-option {
   flex: 1 1 6.5rem;
   min-height: 3rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
-  padding: 0.5rem;
-  border: 2px solid var(--border);
-  box-shadow: 2px 2px 0 var(--shadow);
+  gap: 0.45rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-subtle);
+  box-shadow: none;
   background: var(--card-bg);
   color: var(--text);
   cursor: pointer;
-  font-family: 'Press Start 2P', monospace;
+  font-family: var(--font-pixel);
   font-size: 0.55rem;
+  transition: all 0.15s ease;
 }
 
-.result-option:hover { background: var(--surface); }
+.result-option:hover {
+  background: var(--surface);
+  border-color: var(--accent);
+}
+
 .result-option--active,
 .result-option--active:hover {
+  border: 2px solid var(--border);
+  box-shadow: 2px 2px 0 var(--shadow);
   background: var(--accent);
   color: var(--on-accent);
-  box-shadow: 3px 3px 0 var(--shadow), 0 0 6px var(--accent);
+}
+
+.download-cta {
+  min-height: 3.5rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
 }
 
 .result-note,
@@ -417,10 +518,8 @@ body {
 
 /* ─── Mobile Responsive (< 640px) ───────────────────────── */
 @media (max-width: 640px) {
-  .result-media { flex-direction: column; align-items: stretch; }
-  .result-thumbnail { width: 100%; height: auto; aspect-ratio: 16 / 9; }
   .result-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem; }
-  .result-option { min-width: 0; padding: 0.35rem 0.15rem; font-size: 0.5rem; }
+  .result-option { min-width: 0; padding: 0.4rem 0.2rem; font-size: 0.5rem; }
 
   /* Header logo text smaller */
   .logo-text {
@@ -442,7 +541,7 @@ body {
   /* Input font smaller */
   .pixel-input {
     font-size: 0.9rem;
-    padding: 0.85rem 3rem 0.85rem 1rem;
+    padding: 0.85rem 4.5rem 0.85rem 1rem;
   }
 
   /* Button padding smaller */
@@ -454,8 +553,8 @@ body {
   /* Main section vertical gap tighter */
   .main-content {
     gap: 2rem !important;
-    padding-top: 2.5rem !important;
-    padding-bottom: 2.5rem !important;
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
   }
 }
 

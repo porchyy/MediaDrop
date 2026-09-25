@@ -22,6 +22,7 @@ const formatBytes = bytes => {
 export default function ResultCard({
   phase,
   media,
+  platform,
   job,
   headingRef,
   format,
@@ -48,6 +49,7 @@ export default function ResultCard({
 
   const progressPercent = job?.progress
   const downloadedMb = job?.downloaded_bytes ? formatBytes(job.downloaded_bytes) : null
+  const displayPlatform = platform || (media.media_type ?? media.type ?? 'MEDIA').toUpperCase()
 
   return (
     <section className="result-section" aria-label="Analysis result">
@@ -55,18 +57,41 @@ export default function ResultCard({
         {phase === 'result' ? 'RESULT' : isWorking ? 'DOWNLOADING' : 'FILE READY'}
       </p>
       <div className="result-card pixel-border">
-        <span className="demo-badge">MEDIA READY</span>
-        <div className="result-media">
-          <div className="result-thumbnail" role="img" aria-label="Media cover image">
-            {media.thumbnail
-              ? <img src={media.thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <Image size={34} strokeWidth={1.5} aria-hidden="true" />}
-          </div>
-          <div>
-            <h2 className="result-title">{media.title}</h2>
+        {/* Large 16:9 Thumbnail Hero */}
+        <div className="result-thumbnail-hero" role="img" aria-label="Media cover image">
+          {media.thumbnail ? (
+            <img
+              src={media.thumbnail}
+              alt=""
+              className="result-hero-img"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: media.media_type === 'image' ? 'contain' : 'cover',
+              }}
+            />
+          ) : media.media_type === 'audio' ? (
+            <div className="audio-placeholder">
+              <Music size={44} strokeWidth={1.5} aria-hidden="true" />
+              <span className="audio-placeholder-label">AUDIO TRACK</span>
+            </div>
+          ) : (
+            <div className="image-placeholder">
+              <Image size={44} strokeWidth={1.5} aria-hidden="true" />
+            </div>
+          )}
+        </div>
+
+        {/* Media Title & Metadata Hierarchy */}
+        <div className="result-info">
+          <h2 className="result-title">{media.title}</h2>
+          <div className="result-meta-bar">
             <p className="result-meta">
-              {mediaDuration(media.duration)} · {(media.media_type ?? media.type ?? '').toUpperCase()}
+              {displayPlatform} • {mediaDuration(media.duration)}
             </p>
+            <span className="detected-badge" aria-label="Media detected">
+              <span className="detected-dot" aria-hidden="true">●</span> DETECTED
+            </span>
           </div>
         </div>
 
@@ -107,9 +132,9 @@ export default function ResultCard({
               </div>
             </fieldset>
 
-            <button className="pixel-btn pixel-btn--full" type="button" onClick={onDownload}>
-              <Download size={16} aria-hidden="true" />
-              Download
+            <button className="pixel-btn pixel-btn--full download-cta" type="button" onClick={onDownload}>
+              <Download size={18} aria-hidden="true" />
+              DOWNLOAD {format}
             </button>
           </>
         ) : (
@@ -122,7 +147,7 @@ export default function ResultCard({
                 <div className="activity-bar" aria-hidden="true">
                   <span style={progressPercent != null ? { width: `${progressPercent}%`, transition: 'width 0.3s ease' } : {}} />
                 </div>
-                <p style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: '0.35rem', textAlign: 'center' }}>
+                <p style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: '0.5rem', textAlign: 'center' }}>
                   {progressPercent != null
                     ? `${progressPercent}%`
                     : downloadedMb
@@ -134,22 +159,22 @@ export default function ResultCard({
 
             {phase === 'success' && (
               <div style={{ marginTop: '0.75rem', width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div style={{ padding: '0.6rem 0.8rem', background: 'var(--bg-subtle, rgba(0,0,0,0.05))', borderRadius: '4px', fontSize: '0.8rem' }}>
-                  {job?.filename && <p style={{ fontWeight: '600', wordBreak: 'break-all' }}>{job.filename}</p>}
-                  <p style={{ color: 'var(--muted)', fontSize: '0.75rem', marginTop: '0.2rem' }}>
+                <div style={{ padding: '0.75rem 1rem', background: 'var(--card-bg)', borderRadius: '4px', fontSize: '0.85rem' }}>
+                  {job?.filename && <p style={{ fontWeight: '600', wordBreak: 'break-all', margin: 0 }}>{job.filename}</p>}
+                  <p style={{ color: 'var(--muted)', fontSize: '0.8rem', marginTop: '0.25rem', marginBottom: 0 }}>
                     {formatBytes(job?.file_size)} • Expires in 30 minutes
                   </p>
                 </div>
 
                 {job?.file_id ? (
                   <a
-                    className="pixel-btn pixel-btn--full"
+                    className="pixel-btn pixel-btn--full download-cta"
                     href={getFileDownloadUrl(job.file_id)}
                     download={job.filename || true}
-                    style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                    style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem' }}
                   >
-                    <Download size={16} aria-hidden="true" />
-                    Download File
+                    <Download size={18} aria-hidden="true" />
+                    DOWNLOAD FILE
                   </a>
                 ) : null}
 

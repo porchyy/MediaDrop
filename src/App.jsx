@@ -28,6 +28,7 @@ function App() {
     } catch (_) {}
   }, [theme])
 
+  const [currentPhase, setCurrentPhase] = useState('idle')
   const toggleTheme = () => setTheme(t => (t === 'dark' ? 'light' : 'dark'))
 
   return (
@@ -42,18 +43,18 @@ function App() {
           className="main-content"
           style={{
             flex: 1,
-            maxWidth: '40rem',
+            maxWidth: '42.5rem',
             margin: '0 auto',
             width: '100%',
-            padding: '3rem 1.5rem 2rem',
+            padding: '3rem 1.25rem 2rem',
             display: 'flex',
             flexDirection: 'column',
             gap: '2.5rem',
           }}
         >
           <Hero />
-          <UrlInput />
-          <SupportedFormats />
+          <UrlInput onPhaseChange={setCurrentPhase} />
+          {(currentPhase === 'idle' || currentPhase === 'error') && <SupportedFormats />}
         </main>
 
         <Footer />

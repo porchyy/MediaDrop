@@ -13,6 +13,23 @@ export function isValidMediaUrl(value) {
   }
 }
 
+export function getPlatformName(urlStr, mediaType) {
+  try {
+    const parsed = new URL(urlStr)
+    const host = parsed.hostname.toLowerCase()
+    if (host.includes('tiktok.com')) return 'TikTok'
+    if (host.includes('youtube.com') || host.includes('youtu.be')) return 'YouTube'
+    if (host.includes('instagram.com')) return 'Instagram'
+    if (host.includes('twitter.com') || host.includes('x.com')) return 'X'
+    if (host.includes('facebook.com') || host.includes('fb.watch')) return 'Facebook'
+    if (host.includes('reddit.com')) return 'Reddit'
+    if (host.includes('soundcloud.com')) return 'SoundCloud'
+    if (host.includes('vimeo.com')) return 'Vimeo'
+    if (host.includes('twitch.tv')) return 'Twitch'
+  } catch (_) {}
+  return (mediaType || 'MEDIA').toUpperCase()
+}
+
 const errors = {
   invalid: ['INVALID LINK', 'Please enter a valid HTTP or HTTPS URL.'],
   unsupported: ['UNSUPPORTED MEDIA', 'This link is currently not supported.'],
@@ -20,7 +37,7 @@ const errors = {
   general: ['SOMETHING WENT WRONG', 'Please try again.'],
 }
 
-export default function UrlInput() {
+export default function UrlInput({ onPhaseChange }) {
   const [url, setUrl] = useState('')
   const [phase, setPhase] = useState('idle')
   const [errorKind, setErrorKind] = useState(null)
@@ -31,6 +48,10 @@ export default function UrlInput() {
   const pending = useRef(null)
   const pasteVersion = useRef(0)
   const resultHeading = useRef(null)
+
+  useEffect(() => {
+    onPhaseChange?.(phase)
+  }, [phase, onPhaseChange])
 
   useEffect(() => () => {
     pending.current?.cancel()
@@ -231,7 +252,7 @@ export default function UrlInput() {
             placeholder="Paste your link here..."
             spellCheck={false}
             autoComplete="off"
-            style={{ paddingRight: '3.25rem' }}
+            style={{ paddingRight: '5rem' }}
           />
           <button
             type="button"
@@ -241,7 +262,8 @@ export default function UrlInput() {
             aria-label="Paste from clipboard"
             className="paste-btn"
           >
-            <Clipboard size={13} />
+            <Clipboard size={14} />
+            <span className="paste-text">PASTE</span>
           </button>
         </div>
         {phase === 'error' ? (
@@ -255,6 +277,8 @@ export default function UrlInput() {
               ? 'Analyzing link...'
               : phase === 'preparing' || phase === 'downloading' || phase === 'processing'
               ? 'Downloading and processing media...'
+              : phase === 'result' || phase === 'success'
+              ? '✓ Media detected'
               : isReady
               ? '✓ Ready to analyze'
               : url.trim()
@@ -284,6 +308,7 @@ export default function UrlInput() {
         <ResultCard
           phase={phase}
           media={media}
+          platform={getPlatformName(url, media?.media_type)}
           job={job}
           headingRef={resultHeading}
           format={format}

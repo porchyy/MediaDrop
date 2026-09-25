@@ -7,14 +7,14 @@ import { createServer } from 'vite'
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 async function loadModules(server) {
-  const { isValidMediaUrl } = await server.ssrLoadModule('/src/components/UrlInput.jsx')
+  const { isValidMediaUrl, getPlatformName } = await server.ssrLoadModule('/src/components/UrlInput.jsx')
   const { default: ResultCard } = await server.ssrLoadModule('/src/components/ResultCard.jsx')
   const { analyzeMedia } = await server.ssrLoadModule('/src/api/analyzeMedia.js')
   const { startDownloadJob, pollJobStatus, cancelDownloadJob, getFileDownloadUrl } = await server.ssrLoadModule('/src/api/downloadMedia.js')
-  return { isValidMediaUrl, ResultCard, analyzeMedia, startDownloadJob, pollJobStatus, cancelDownloadJob, getFileDownloadUrl }
+  return { isValidMediaUrl, getPlatformName, ResultCard, analyzeMedia, startDownloadJob, pollJobStatus, cancelDownloadJob, getFileDownloadUrl }
 }
 
-// ── URL validation ────────────────────────────────────────────────────────────
+// ── URL validation & Platform detection ───────────────────────────────────────
 
 test('isValidMediaUrl accepts http/https URLs and rejects others', async () => {
   const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
@@ -30,6 +30,21 @@ test('isValidMediaUrl accepts http/https URLs and rejects others', async () => {
   }
 })
 
+test('getPlatformName derives platform accurately from URL', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { getPlatformName } = await loadModules(server)
+    assert.equal(getPlatformName('https://www.tiktok.com/@user/video/123', 'video'), 'TikTok')
+    assert.equal(getPlatformName('https://youtu.be/abc', 'video'), 'YouTube')
+    assert.equal(getPlatformName('https://www.youtube.com/watch?v=abc', 'video'), 'YouTube')
+    assert.equal(getPlatformName('https://www.instagram.com/reel/abc', 'video'), 'Instagram')
+    assert.equal(getPlatformName('https://x.com/user/status/123', 'video'), 'X')
+    assert.equal(getPlatformName('https://example.com/direct.mp4', 'video'), 'VIDEO')
+  } finally {
+    await server.close()
+  }
+})
+
 // ── ResultCard with real server metadata ──────────────────────────────────────
 
 test('ResultCard renders server-provided title, duration (mm:ss), and media_type', async () => {
@@ -39,17 +54,18 @@ test('ResultCard renders server-provided title, duration (mm:ss), and media_type
 
     const videoMedia = { title: 'My Video', duration: 204, media_type: 'video', thumbnail: null, available_formats: ['video', 'audio'] }
     const html = renderToStaticMarkup(createElement(ResultCard, { phase: 'result', format: 'VIDEO', quality: 'Best', media: videoMedia }))
-    assert.match(html, /MEDIA READY/)
+    assert.match(html, /DETECTED/)
     assert.match(html, /My Video/)
-    assert.match(html, /03:24 · VIDEO/)
+    assert.match(html, /VIDEO • 03:24/)
     assert.match(html, /VIDEO QUALITY/)
     assert.match(html, /Best/)
+    assert.match(html, /DOWNLOAD VIDEO/)
 
     // Long title wrapping
     const longMedia = { title: 'Example Media With A VeryLongUnbrokenSectionForTesting', duration: 65, media_type: 'video', thumbnail: null, available_formats: ['video', 'audio'] }
     const longHtml = renderToStaticMarkup(createElement(ResultCard, { phase: 'result', format: 'VIDEO', quality: 'Best', media: longMedia }))
     assert.match(longHtml, /VeryLongUnbrokenSectionForTesting/)
-    assert.match(longHtml, /01:05 · VIDEO/)
+    assert.match(longHtml, /VIDEO • 01:05/)
   } finally {
     await server.close()
   }
@@ -112,7 +128,7 @@ test('ResultCard renders downloading and file ready states with real file info',
     assert.match(readyHtml, /12\.4 MB/)
     assert.match(readyHtml, /Expires in 30 minutes/)
     assert.match(readyHtml, /href="\/api\/files\/abc123xyz"/)
-    assert.match(readyHtml, /Download File/)
+    assert.match(readyHtml, /DOWNLOAD FILE/i)
     assert.match(readyHtml, /New Link/)
   } finally {
     await server.close()
