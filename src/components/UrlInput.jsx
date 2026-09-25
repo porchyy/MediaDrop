@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Search, Clipboard } from 'lucide-react'
 import { analyzeMedia } from '../api/analyzeMedia'
+import { startDownloadJob, pollJobStatus, cancelDownloadJob } from '../api/downloadMedia'
 import ResultCard from './ResultCard'
 
 export function isValidMediaUrl(value) {
@@ -15,6 +16,7 @@ export function isValidMediaUrl(value) {
 const errors = {
   invalid: ['INVALID LINK', 'Please enter a valid HTTP or HTTPS URL.'],
   unsupported: ['UNSUPPORTED MEDIA', 'This link is currently not supported.'],
+  too_large: ['FILE TOO LARGE', 'The file exceeds the maximum 500 MB limit.'],
   general: ['SOMETHING WENT WRONG', 'Please try again.'],
 }
 
@@ -23,9 +25,9 @@ export default function UrlInput() {
   const [phase, setPhase] = useState('idle')
   const [errorKind, setErrorKind] = useState(null)
   const [media, setMedia] = useState(null)
+  const [job, setJob] = useState(null)
   const [format, setFormat] = useState('VIDEO')
   const [quality, setQuality] = useState('Best')
-  const [showDemoNotice, setShowDemoNotice] = useState(false)
   const pending = useRef(null)
   const pasteVersion = useRef(0)
   const resultHeading = useRef(null)
@@ -58,21 +60,21 @@ export default function UrlInput() {
     setPhase('idle')
     setErrorKind(null)
     setMedia(null)
+    setJob(null)
     setFormat('VIDEO')
     setQuality('Best')
-    setShowDemoNotice(false)
   }
 
   const updateUrl = value => {
-    if (phase === 'analyzing' || phase === 'preparing') return
+    if (phase === 'analyzing' || phase === 'preparing' || phase === 'downloading' || phase === 'processing') return
     pasteVersion.current += 1
     setUrl(value)
     setPhase('idle')
     setErrorKind(null)
     setMedia(null)
+    setJob(null)
     setFormat('VIDEO')
     setQuality('Best')
-    setShowDemoNotice(false)
   }
 
   const handlePaste = async () => {
@@ -98,7 +100,7 @@ export default function UrlInput() {
     }
     setErrorKind(null)
     setMedia(null)
-    setShowDemoNotice(false)
+    setJob(null)
     setFormat('VIDEO')
     setQuality('Best')
     setPhase('analyzing')
@@ -114,7 +116,8 @@ export default function UrlInput() {
       const initialFormat =
         avail.includes('video') ? 'VIDEO' :
         avail.includes('audio') ? 'MP3' :
-        avail.includes('image') ? 'IMAGE' : 'VIDEO'
+        avail.includes('image') ? 'IMAGE' :
+        avail.includes('thumbnail') ? 'THUMBNAIL' : 'VIDEO'
       setFormat(initialFormat)
       setMedia(result)
       setPhase('result')
@@ -128,22 +131,89 @@ export default function UrlInput() {
     }
   }
 
-  const startDownload = () => {
+  const startDownload = async () => {
     if (phase !== 'result' || pending.current !== null) return
     setPhase('preparing')
-    let timer
-    const operation = { cancel: () => clearTimeout(timer) }
-    timer = setTimeout(() => {
-      if (pending.current !== operation) return
-      pending.current = null
-      setPhase('success')
-    }, 1200)
+    setJob(null)
+
+    let isCancelled = false
+    let currentJobId = null
+    let pollTimer = null
+
+    const operation = {
+      cancel: () => {
+        isCancelled = true
+        if (pollTimer) clearTimeout(pollTimer)
+        if (currentJobId) cancelDownloadJob(currentJobId)
+      },
+    }
     pending.current = operation
+
+    try {
+      const downloadInit = await startDownloadJob(url.trim(), format, quality)
+      if (isCancelled || pending.current !== operation) return
+
+      currentJobId = downloadInit.job_id
+      setJob({ job_id: currentJobId, status: downloadInit.status })
+
+      const poll = async () => {
+        if (isCancelled || pending.current !== operation) return
+        try {
+          const statusData = await pollJobStatus(currentJobId)
+          if (isCancelled || pending.current !== operation) return
+          setJob(statusData)
+
+          if (statusData.status === 'downloading') {
+            setPhase('downloading')
+          } else if (statusData.status === 'processing') {
+            setPhase('processing')
+          } else if (statusData.status === 'ready') {
+            setPhase('success')
+            if (pending.current === operation) pending.current = null
+            return
+          } else if (statusData.status === 'failed') {
+            if (statusData.error_code === 'file_too_large') {
+              setErrorKind('too_large')
+            } else {
+              setErrorKind('general')
+            }
+            setPhase('error')
+            if (pending.current === operation) pending.current = null
+            return
+          }
+
+          pollTimer = setTimeout(poll, 1000)
+        } catch (_) {
+          if (!isCancelled && pending.current === operation) {
+            setErrorKind('general')
+            setPhase('error')
+            pending.current = null
+          }
+        }
+      }
+
+      pollTimer = setTimeout(poll, 1000)
+    } catch (_) {
+      if (!isCancelled && pending.current === operation) {
+        setErrorKind('general')
+        setPhase('error')
+        pending.current = null
+      }
+    }
   }
 
-  const busy = phase === 'analyzing' || phase === 'preparing'
+  const busy = phase === 'analyzing' || phase === 'preparing' || phase === 'downloading' || phase === 'processing'
   const isReady = isValidMediaUrl(url.trim())
-  const announcement = phase === 'analyzing' ? 'Analyzing link' : phase === 'result' ? 'Analysis result ready' : phase === 'preparing' ? 'Preparing file' : phase === 'success' ? 'Demo ready; no file is available yet' : ''
+  const announcement =
+    phase === 'analyzing'
+      ? 'Analyzing link'
+      : phase === 'result'
+      ? 'Analysis result ready'
+      : phase === 'preparing' || phase === 'downloading' || phase === 'processing'
+      ? 'Downloading and preparing file'
+      : phase === 'success'
+      ? 'File ready for download'
+      : ''
 
   return (
     <section className="analyze-section">
@@ -177,18 +247,30 @@ export default function UrlInput() {
         </div>
         {phase === 'error' ? (
           <div id="url-error" className="error-card pixel-border" role="alert">
-            <strong>{errors[errorKind][0]}</strong>
-            <p>{errors[errorKind][1]}</p>
+            <strong>{errors[errorKind]?.[0] || 'ERROR'}</strong>
+            <p>{errors[errorKind]?.[1] || 'Something went wrong.'}</p>
           </div>
         ) : (
           <p id="url-hint" className="url-hint">
-            {phase === 'analyzing' ? 'Analyzing link...' : phase === 'preparing' ? 'Preparing file...' : isReady ? '✓ Ready to analyze' : url.trim() ? 'Enter a full http(s) link' : 'Paste a media link'}
+            {phase === 'analyzing'
+              ? 'Analyzing link...'
+              : phase === 'preparing' || phase === 'downloading' || phase === 'processing'
+              ? 'Downloading and processing media...'
+              : isReady
+              ? '✓ Ready to analyze'
+              : url.trim()
+              ? 'Enter a full http(s) link'
+              : 'Paste a media link'}
           </p>
         )}
         <div className="analyze-actions">
           <button className="pixel-btn pixel-btn--full" type="submit" disabled={busy}>
             <Search size={14} strokeWidth={2.5} />
-            {phase === 'analyzing' ? 'Analyzing...' : phase === 'preparing' ? 'Preparing...' : 'Analyze'}
+            {phase === 'analyzing'
+              ? 'Analyzing...'
+              : phase === 'preparing' || phase === 'downloading' || phase === 'processing'
+              ? 'Downloading...'
+              : 'Analyze'}
           </button>
           {(url || phase !== 'idle') && <button className="clear-btn" type="button" onClick={reset}>Clear</button>}
         </div>
@@ -199,18 +281,17 @@ export default function UrlInput() {
           <div className="activity-bar" aria-hidden="true"><span /></div>
         </div>
       )}
-      {media && ['result', 'preparing', 'success'].includes(phase) && (
+      {media && ['result', 'preparing', 'downloading', 'processing', 'success'].includes(phase) && (
         <ResultCard
           phase={phase}
           media={media}
+          job={job}
           headingRef={resultHeading}
           format={format}
           quality={quality}
-          showDemoNotice={showDemoNotice}
           onFormatChange={(next, initial) => { setFormat(next); setQuality(initial) }}
           onQualityChange={setQuality}
           onDownload={startDownload}
-          onDemoDownload={() => setShowDemoNotice(true)}
           onClear={reset}
         />
       )}

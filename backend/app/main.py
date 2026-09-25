@@ -1,22 +1,24 @@
-import ipaddress
+import asyncio
 import os
+import shutil
+from contextlib import asynccontextmanager
+from pathlib import Path
 from urllib.parse import urlsplit
 
 import httpx
 import yt_dlp
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
-app = FastAPI(title="MediaDrop API")
+from app.downloader import run_job
+from app.jobs import job_manager
+from app.security import is_safe_host, is_safe_url, validate_url_syntax
 
+STORAGE_TTL_SECONDS = float(os.environ.get("STORAGE_TTL_SECONDS", 1800.0))  # 30 mins
 REQUEST_TIMEOUT = float(os.environ.get("REQUEST_TIMEOUT", "5"))
 YTDLP_TIMEOUT = float(os.environ.get("YTDLP_TIMEOUT", "15"))
 
-# Hostnames always blocked regardless of DNS (SSRF guard — non-IP form)
-_BLOCKED_HOSTNAMES = frozenset({"localhost", "0.0.0.0"})
-
-# Map file extensions to media types
 _EXTENSION_TYPES: dict[str, str] = {
     ext: mt
     for mt, exts in {
@@ -27,15 +29,11 @@ _EXTENSION_TYPES: dict[str, str] = {
     for ext in exts
 }
 
-# Map media type to the output formats available to the user
 _AVAILABLE_FORMATS: dict[str, list[str]] = {
     "image": ["image"],
     "video": ["video", "audio"],
     "audio": ["audio"],
 }
-
-
-# --- Schemas ---
 
 
 class MediaInfo(BaseModel):
@@ -51,29 +49,14 @@ class AnalyzeRequest(BaseModel):
     url: str | None = None
 
 
-# --- Internal errors ---
+class DownloadRequest(BaseModel):
+    url: str
+    format: str = "video"
+    quality: str = "Best"
 
 
 class _UnsupportedMedia(Exception):
     pass
-
-
-# --- Helpers ---
-
-
-def _is_private_host(hostname: str) -> bool:
-    """Return True when hostname is a private/loopback IP or a blocked name.
-
-    Checks literal IP addresses and a small blocklist of well-known
-    dangerous hostnames. Does not resolve DNS.
-    """
-    if hostname.lower() in _BLOCKED_HOSTNAMES:
-        return True
-    try:
-        ip = ipaddress.ip_address(hostname)
-        return ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_unspecified
-    except ValueError:
-        return False  # not an IP — allow through
 
 
 def _media_type_from_content_type(content_type: str) -> str | None:
@@ -106,8 +89,6 @@ def _build_direct_media_info(url: str, media_type: str) -> MediaInfo:
 
 
 def _analyze_platform(url: str) -> MediaInfo:
-    """Extract metadata via yt-dlp without downloading any media."""
-
     opts = {
         "quiet": True,
         "no_warnings": True,
@@ -120,11 +101,15 @@ def _analyze_platform(url: str) -> MediaInfo:
     except yt_dlp.utils.DownloadError as exc:
         raise _UnsupportedMedia() from exc
 
-    media_type = "video"  # yt-dlp predominantly handles video/audio platforms
+    media_type = "video"
     title = info.get("title") or url
     raw_duration = info.get("duration")
     duration = int(raw_duration) if raw_duration is not None else None
     thumbnail = info.get("thumbnail") or None
+
+    formats = list(_AVAILABLE_FORMATS[media_type])
+    if thumbnail:
+        formats.append("thumbnail")
 
     return MediaInfo(
         title=title,
@@ -132,8 +117,29 @@ def _analyze_platform(url: str) -> MediaInfo:
         thumbnail=thumbnail,
         duration=duration,
         source="platform",
-        available_formats=_AVAILABLE_FORMATS[media_type],
+        available_formats=formats,
     )
+
+
+async def _periodic_cleanup_loop():
+    while True:
+        try:
+            await asyncio.sleep(300)  # check every 5 minutes
+            job_manager.cleanup_expired_jobs(ttl_seconds=STORAGE_TTL_SECONDS)
+        except asyncio.CancelledError:
+            break
+        except Exception:
+            pass
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    cleanup_task = asyncio.create_task(_periodic_cleanup_loop())
+    yield
+    cleanup_task.cancel()
+
+
+app = FastAPI(title="MediaDrop API", lifespan=lifespan)
 
 
 # --- Routes ---
@@ -141,38 +147,29 @@ def _analyze_platform(url: str) -> MediaInfo:
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "ffmpeg": bool(shutil.which("ffmpeg")),
+    }
 
 
 @app.post("/api/analyze")
 def analyze(body: AnalyzeRequest):
     url = (body.url or "").strip()
 
-    # 1. Validate URL syntax
-    try:
-        parts = urlsplit(url)
-        valid = (
-            parts.scheme in ("http", "https")
-            and bool(parts.hostname)
-            and not any(c.isspace() for c in parts.netloc)
-        )
-        parts.port  # raises ValueError on malformed port
-    except ValueError:
-        valid = False
-    if not valid:
+    valid, hostname = validate_url_syntax(url)
+    if not valid or not hostname:
         return JSONResponse(
             {"code": "invalid_url", "message": "Please enter a valid HTTP or HTTPS URL."},
             status_code=400,
         )
 
-    # 2. SSRF guard — reject private/loopback IP addresses
-    if _is_private_host(parts.hostname):
+    if not is_safe_host(hostname):
         return JSONResponse(
             {"code": "invalid_url", "message": "Please enter a valid HTTP or HTTPS URL."},
             status_code=400,
         )
 
-    # 3. Probe URL with HEAD to select analyzer
     media_type: str | None = None
     head_returned_html = False
     try:
@@ -183,19 +180,16 @@ def analyze(body: AnalyzeRequest):
             if ct.lower().startswith("text/html"):
                 head_returned_html = True
     except Exception:
-        pass  # HEAD failed — fall through to extension check or platform analyzer
+        pass
 
-    # 4a. Direct Media Analyzer — HEAD identified a media Content-Type
     if media_type is not None:
         return _build_direct_media_info(url, media_type)
 
-    # 4b. Direct Media Analyzer — extension fallback (HEAD failed or returned no type)
     if not head_returned_html:
         ext_type = _media_type_from_extension(url)
         if ext_type is not None:
             return _build_direct_media_info(url, ext_type)
 
-    # 4c. Platform Analyzer — yt-dlp for pages/platform URLs
     try:
         return _analyze_platform(url)
     except _UnsupportedMedia:
@@ -208,3 +202,81 @@ def analyze(body: AnalyzeRequest):
             {"code": "internal_error", "message": "Please try again."},
             status_code=500,
         )
+
+
+@app.post("/api/download")
+async def start_download(body: DownloadRequest):
+    url = (body.url or "").strip()
+    valid, hostname = validate_url_syntax(url)
+    if not valid or not hostname or not is_safe_host(hostname):
+        return JSONResponse(
+            {"code": "invalid_url", "message": "Please enter a valid HTTP or HTTPS URL."},
+            status_code=400,
+        )
+
+    # Determine if direct or platform
+    is_direct = False
+    ext = _media_type_from_extension(url)
+    if ext:
+        is_direct = True
+    else:
+        try:
+            with httpx.Client(timeout=3.0, follow_redirects=True) as client:
+                r = client.head(url, headers={"User-Agent": "MediaDrop/1.0"})
+                if _media_type_from_content_type(r.headers.get("content-type", "")):
+                    is_direct = True
+        except Exception:
+            pass
+
+    job = job_manager.create_job(url=url, format=body.format, quality=body.quality)
+
+    # Start download task in background
+    asyncio.create_task(run_job(job.job_id, job_manager, is_direct=is_direct))
+
+    return {"job_id": job.job_id, "status": "queued"}
+
+
+@app.get("/api/jobs/{job_id}")
+def get_job_status(job_id: str):
+    job = job_manager.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    return {
+        "job_id": job.job_id,
+        "status": job.status,
+        "progress": job.progress,
+        "downloaded_bytes": job.downloaded_bytes,
+        "total_bytes": job.total_bytes,
+        "file_id": job.file_id if job.status == "ready" else None,
+        "file_size": job.file_size,
+        "filename": job.filename,
+        "error": job.error,
+        "error_code": job.error_code,
+    }
+
+
+@app.post("/api/jobs/{job_id}/cancel")
+def cancel_job(job_id: str):
+    success = job_manager.cancel_job(job_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return {"status": "cancelled"}
+
+
+@app.get("/api/files/{file_id}")
+def download_file(file_id: str):
+    job = job_manager.get_job_by_file_id(file_id)
+    if not job or job.status != "ready" or not job.file_path:
+        raise HTTPException(status_code=404, detail="File not found or expired")
+
+    file_path = Path(job.file_path)
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found on disk")
+
+    filename = job.filename or file_path.name
+    return FileResponse(
+        path=str(file_path),
+        filename=filename,
+        media_type="application/octet-stream",
+    )

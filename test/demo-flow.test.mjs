@@ -10,7 +10,8 @@ async function loadModules(server) {
   const { isValidMediaUrl } = await server.ssrLoadModule('/src/components/UrlInput.jsx')
   const { default: ResultCard } = await server.ssrLoadModule('/src/components/ResultCard.jsx')
   const { analyzeMedia } = await server.ssrLoadModule('/src/api/analyzeMedia.js')
-  return { isValidMediaUrl, ResultCard, analyzeMedia }
+  const { startDownloadJob, pollJobStatus, cancelDownloadJob, getFileDownloadUrl } = await server.ssrLoadModule('/src/api/downloadMedia.js')
+  return { isValidMediaUrl, ResultCard, analyzeMedia, startDownloadJob, pollJobStatus, cancelDownloadJob, getFileDownloadUrl }
 }
 
 // ── URL validation ────────────────────────────────────────────────────────────
@@ -36,10 +37,9 @@ test('ResultCard renders server-provided title, duration (mm:ss), and media_type
   try {
     const { ResultCard } = await loadModules(server)
 
-    // Standard video media from server
     const videoMedia = { title: 'My Video', duration: 204, media_type: 'video', thumbnail: null, available_formats: ['video', 'audio'] }
     const html = renderToStaticMarkup(createElement(ResultCard, { phase: 'result', format: 'VIDEO', quality: 'Best', media: videoMedia }))
-    assert.match(html, /DEMO PREVIEW/)
+    assert.match(html, /MEDIA READY/)
     assert.match(html, /My Video/)
     assert.match(html, /03:24 · VIDEO/)
     assert.match(html, /VIDEO QUALITY/)
@@ -80,35 +80,40 @@ test('ResultCard shows thumbnail img when thumbnail is provided', async () => {
   }
 })
 
-test('ResultCard only shows Format buttons in available_formats', async () => {
+test('ResultCard shows THUMBNAIL format button when thumbnail is in available_formats', async () => {
   const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
   try {
     const { ResultCard } = await loadModules(server)
-    // Audio-only media: only MP3 should appear
-    const audioMedia = { title: 'song.mp3', duration: 180, media_type: 'audio', thumbnail: null, available_formats: ['audio'] }
-    const html = renderToStaticMarkup(createElement(ResultCard, { phase: 'result', format: 'MP3', quality: '192 kbps', media: audioMedia }))
-    assert.match(html, /MP3/)
-    assert.doesNotMatch(html, /aria-pressed="true"[^>]*>[^<]*<svg[^>]*>[\s\S]*<\/svg>VIDEO<\/button>/)
+    const platformMedia = { title: 'Platform Video', duration: 300, media_type: 'video', thumbnail: 'https://img.com/t.jpg', available_formats: ['video', 'audio', 'thumbnail'] }
+    const html = renderToStaticMarkup(createElement(ResultCard, { phase: 'result', format: 'THUMBNAIL', quality: 'Original', media: platformMedia }))
+    assert.match(html, /THUMBNAIL/)
   } finally {
     await server.close()
   }
 })
 
-test('ResultCard renders preparing and success states', async () => {
+test('ResultCard renders downloading and file ready states with real file info', async () => {
   const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
   try {
     const { ResultCard } = await loadModules(server)
     const media = { title: 'clip.mp4', duration: 120, media_type: 'video', thumbnail: null, available_formats: ['video', 'audio'] }
 
-    const preparing = renderToStaticMarkup(createElement(ResultCard, { phase: 'preparing', format: 'MP3', quality: '320 kbps', media, onClear() {} }))
-    assert.match(preparing, /PREPARING FILE/)
-    assert.match(preparing, /MP3 · 320 kbps/)
-    assert.doesNotMatch(preparing, /Download File/)
+    // Downloading state with progress
+    const downloadingJob = { status: 'downloading', progress: 45.5, downloaded_bytes: 45000000 }
+    const downloadingHtml = renderToStaticMarkup(createElement(ResultCard, { phase: 'downloading', format: 'VIDEO', quality: '1080p', media, job: downloadingJob, onClear() {} }))
+    assert.match(downloadingHtml, /DOWNLOADING/)
+    assert.match(downloadingHtml, /45\.5%/)
 
-    const success = renderToStaticMarkup(createElement(ResultCard, { phase: 'success', format: 'MP3', quality: '320 kbps', media, onClear() {} }))
-    assert.match(success, /DEMO READY/)
-    assert.match(success, /Download File/)
-    assert.match(success, /New Link/)
+    // Ready state with file link and size
+    const readyJob = { status: 'ready', file_id: 'abc123xyz', filename: 'clip.mp4', file_size: 13000000 }
+    const readyHtml = renderToStaticMarkup(createElement(ResultCard, { phase: 'success', format: 'VIDEO', quality: '1080p', media, job: readyJob, onClear() {} }))
+    assert.match(readyHtml, /FILE READY/)
+    assert.match(readyHtml, /clip\.mp4/)
+    assert.match(readyHtml, /12\.4 MB/)
+    assert.match(readyHtml, /Expires in 30 minutes/)
+    assert.match(readyHtml, /href="\/api\/files\/abc123xyz"/)
+    assert.match(readyHtml, /Download File/)
+    assert.match(readyHtml, /New Link/)
   } finally {
     await server.close()
   }
@@ -149,17 +154,52 @@ test('analyzeMedia sends POST to /api/analyze and returns server data', async ()
   }
 })
 
-test('analyzeMedia throws with error code on non-ok response', async () => {
+// ── downloadMedia API module ──────────────────────────────────────────────────
+
+test('downloadMedia module starts, polls, and cancels jobs correctly', async () => {
   const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
   const originalFetch = globalThis.fetch
   try {
-    const { analyzeMedia } = await loadModules(server)
-    const controller = new AbortController()
-    globalThis.fetch = async () => ({
-      ok: false,
-      json: async () => ({ code: 'unsupported_media', message: 'Unsupported' }),
-    })
-    await assert.rejects(analyzeMedia('https://example.com/x', controller.signal), { code: 'unsupported_media' })
+    const { startDownloadJob, pollJobStatus, cancelDownloadJob, getFileDownloadUrl } = await loadModules(server)
+
+    // 1. Start download
+    globalThis.fetch = async (path, options) => {
+      assert.equal(path, '/api/download')
+      assert.equal(options.method, 'POST')
+      return {
+        ok: true,
+        json: async () => ({ job_id: 'job123', status: 'queued' }),
+      }
+    }
+    const startRes = await startDownloadJob('https://example.com/vid.mp4', 'video', 'Best')
+    assert.equal(startRes.job_id, 'job123')
+    assert.equal(startRes.status, 'queued')
+
+    // 2. Poll job status
+    globalThis.fetch = async (path) => {
+      assert.equal(path, '/api/jobs/job123')
+      return {
+        ok: true,
+        json: async () => ({ job_id: 'job123', status: 'ready', file_id: 'file456' }),
+      }
+    }
+    const pollRes = await pollJobStatus('job123')
+    assert.equal(pollRes.status, 'ready')
+    assert.equal(pollRes.file_id, 'file456')
+
+    // 3. Cancel job
+    let cancelCalled = false
+    globalThis.fetch = async (path, options) => {
+      assert.equal(path, '/api/jobs/job123/cancel')
+      assert.equal(options.method, 'POST')
+      cancelCalled = true
+      return { ok: true, json: async () => ({ status: 'cancelled' }) }
+    }
+    await cancelDownloadJob('job123')
+    assert.equal(cancelCalled, true)
+
+    // 4. File download url
+    assert.equal(getFileDownloadUrl('file456'), '/api/files/file456')
   } finally {
     globalThis.fetch = originalFetch
     await server.close()

@@ -3,3 +3,7 @@ dist/
 backend/.venv/
 __pycache__/
 *.pyc
+storage/
+backend/storage/
+.pytest_cache/
+backend/.pytest_cache/

@@ -26,7 +26,8 @@ class HealthTest(unittest.TestCase):
     def test_health(self):
         r = api("GET", "/api/health")
         self.assertEqual(r.status_code, 200)
-        self.assertEqual(r.json(), {"status": "ok"})
+        self.assertEqual(r.json()["status"], "ok")
+        self.assertIn("ffmpeg", r.json())
 
 
 class UrlValidationTest(unittest.TestCase):
@@ -151,7 +152,7 @@ class PlatformAnalyzerTest(unittest.TestCase):
     def test_unsupported_platform_url_returns_422(self):
         import yt_dlp
 
-        with self._patch_head_html():
+        with patch("app.main.is_safe_host", return_value=True), self._patch_head_html():
             with patch("app.main.yt_dlp.YoutubeDL") as mock_cls:
                 mock_ydl = MagicMock()
                 mock_ydl.extract_info.side_effect = yt_dlp.utils.DownloadError("unsupported")
@@ -178,6 +179,49 @@ class PlatformAnalyzerTest(unittest.TestCase):
             r = api("POST", "/api/analyze", {"url": "https://youtube.com/watch?v=live"})
         self.assertEqual(r.status_code, 200)
         self.assertIsNone(r.json()["duration"])
+
+
+class DownloadApiTest(unittest.TestCase):
+    def test_download_invalid_url_returns_400(self):
+        r = api("POST", "/api/download", {"url": "http://127.0.0.1/secret", "format": "video"})
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["code"], "invalid_url")
+
+    def test_download_creates_job_and_poll(self):
+        with patch("app.main.is_safe_host", return_value=True), \
+             patch("app.main.run_job") as mock_run:
+            mock_run.return_value = None
+            r = api("POST", "/api/download", {"url": "https://example.com/video.mp4", "format": "video", "quality": "Best"})
+
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIn("job_id", data)
+        self.assertEqual(data["status"], "queued")
+        job_id = data["job_id"]
+
+        # Poll status
+        poll_r = api("GET", f"/api/jobs/{job_id}")
+        self.assertEqual(poll_r.status_code, 200)
+        poll_data = poll_r.json()
+        self.assertEqual(poll_data["job_id"], job_id)
+        self.assertEqual(poll_data["status"], "queued")
+
+    def test_cancel_job_endpoint(self):
+        with patch("app.main.is_safe_host", return_value=True):
+            r = api("POST", "/api/download", {"url": "https://example.com/audio.mp3", "format": "audio", "quality": "192 kbps"})
+        job_id = r.json()["job_id"]
+
+        cancel_r = api("POST", f"/api/jobs/{job_id}/cancel")
+        self.assertEqual(cancel_r.status_code, 200)
+        self.assertEqual(cancel_r.json()["status"], "cancelled")
+
+        # Verify job is now cancelled
+        poll_r = api("GET", f"/api/jobs/{job_id}")
+        self.assertEqual(poll_r.json()["status"], "cancelled")
+
+    def test_download_file_endpoint_404_when_not_ready(self):
+        r = api("GET", "/api/files/nonexistent_file_id")
+        self.assertEqual(r.status_code, 404)
 
 
 if __name__ == "__main__":
