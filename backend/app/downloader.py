@@ -13,6 +13,7 @@ from app.security import is_safe_url
 MAX_DOWNLOAD_SIZE = int(os.environ.get("MAX_DOWNLOAD_SIZE", 500 * 1024 * 1024))  # 500 MB
 CONNECT_TIMEOUT = float(os.environ.get("CONNECT_TIMEOUT", 10.0))
 READ_TIMEOUT = float(os.environ.get("READ_TIMEOUT", 30.0))
+TOTAL_JOB_TIMEOUT = float(os.environ.get("TOTAL_JOB_TIMEOUT", 600.0))  # 10 minutes
 MAX_CONCURRENT_JOBS = int(os.environ.get("MAX_CONCURRENT_JOBS", 3))
 
 _semaphore = asyncio.Semaphore(MAX_CONCURRENT_JOBS)
@@ -171,14 +172,14 @@ def _run_platform_download_sync(job: Job, manager: JobManager) -> None:
 
     opts = get_platform_ytdlp_opts(job.format, job.quality, out_tmpl)
 
-    def progress_hook(d: dict):
+    def progress_hook(progress_data: dict):
         if manager.is_cancelled(job.job_id):
             raise yt_dlp.utils.DownloadCancelled("Job cancelled by user")
 
-        status = d.get("status")
+        status = progress_data.get("status")
         if status == "downloading":
-            downloaded = d.get("downloaded_bytes") or 0
-            total = d.get("total_bytes") or d.get("total_bytes_estimate")
+            downloaded = progress_data.get("downloaded_bytes") or 0
+            total = progress_data.get("total_bytes") or progress_data.get("total_bytes_estimate")
             if downloaded > MAX_DOWNLOAD_SIZE or (total and total > MAX_DOWNLOAD_SIZE):
                 raise ValueError("file_too_large")
             prog = (downloaded / total * 100) if total else None
@@ -232,14 +233,44 @@ def _run_platform_download_sync(job: Job, manager: JobManager) -> None:
             manager.update_job(job.job_id, status="failed", error=str(exc), error_code="download_failed")
 
 
+def _extract_platform_thumbnail_url(page_url: str) -> str | None:
+    try:
+        with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True, "skip_download": True}) as ydl:
+            info = ydl.extract_info(page_url, download=False)
+            return info.get("thumbnail")
+    except Exception:
+        return None
+
+
 async def run_job(job_id: str, manager: JobManager, is_direct: bool) -> None:
     async with _semaphore:
         job = manager.get_job(job_id)
         if not job or manager.is_cancelled(job_id):
             return
 
-        if is_direct or job.format.lower() in ("image", "thumbnail"):
-            await download_direct_file(job, manager)
-        else:
+        async def _execute():
             loop = asyncio.get_running_loop()
-            await loop.run_in_executor(None, _run_platform_download_sync, job, manager)
+            if job.format.lower() == "thumbnail" and not is_direct:
+                # Extract real thumbnail image URL from platform video
+                manager.update_job(job.job_id, status="downloading", progress=0.0)
+                thumb_url = await loop.run_in_executor(None, _extract_platform_thumbnail_url, job.url)
+                if not thumb_url:
+                    manager.update_job(job.job_id, status="failed", error="Thumbnail not found for this platform URL", error_code="thumbnail_not_found")
+                    return
+                # Update job to download the extracted image URL
+                job.url = thumb_url
+                await download_direct_file(job, manager)
+            elif is_direct or job.format.lower() == "image":
+                await download_direct_file(job, manager)
+            else:
+                await loop.run_in_executor(None, _run_platform_download_sync, job, manager)
+
+        try:
+            await asyncio.wait_for(_execute(), timeout=TOTAL_JOB_TIMEOUT)
+        except asyncio.TimeoutError:
+            manager.update_job(job_id, status="failed", error="Job timed out after 10 minutes", error_code="timeout")
+        except asyncio.CancelledError:
+            manager.update_job(job_id, status="cancelled")
+        finally:
+            manager.unregister_task(job_id)
+

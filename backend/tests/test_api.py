@@ -223,6 +223,14 @@ class DownloadApiTest(unittest.TestCase):
         r = api("GET", "/api/files/nonexistent_file_id")
         self.assertEqual(r.status_code, 404)
 
+    def test_download_missing_ffmpeg_returns_500(self):
+        with patch("app.main.is_safe_host", return_value=True), \
+             patch("app.main._probe_direct_media", return_value=(False, None, True)), \
+             patch("shutil.which", return_value=None):
+            r = api("POST", "/api/download", {"url": "https://youtube.com/watch?v=abc", "format": "video"})
+        self.assertEqual(r.status_code, 500)
+        self.assertEqual(r.json()["code"], "ffmpeg_missing")
+
 
 if __name__ == "__main__":
     unittest.main()

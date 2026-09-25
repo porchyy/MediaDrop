@@ -43,6 +43,13 @@ class JobManager:
         self._jobs: dict[str, Job] = {}
         self._file_id_map: dict[str, str] = {}  # file_id -> job_id
         self._cancellation_tokens: dict[str, bool] = {}  # job_id -> is_cancelled
+        self._active_tasks: dict[str, Any] = {}  # job_id -> asyncio.Task
+
+    def register_task(self, job_id: str, task: Any) -> None:
+        self._active_tasks[job_id] = task
+
+    def unregister_task(self, job_id: str) -> None:
+        self._active_tasks.pop(job_id, None)
 
     def create_job(self, url: str, format: str, quality: str) -> Job:
         job_id = uuid.uuid4().hex[:12]
@@ -111,6 +118,14 @@ class JobManager:
         self._cancellation_tokens[job_id] = True
         job.status = "cancelled"
         self._save_metadata(job)
+
+        # Cancel active task if running
+        task = self._active_tasks.pop(job_id, None)
+        if task and hasattr(task, "cancel"):
+            try:
+                task.cancel()
+            except Exception:
+                pass
 
         # Remove any partial or downloaded files in job directory
         job_dir = self.storage_dir / job_id

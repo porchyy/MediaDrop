@@ -15,7 +15,8 @@ from app.downloader import run_job
 from app.jobs import job_manager
 from app.security import is_safe_host, is_safe_url, validate_url_syntax
 
-STORAGE_TTL_SECONDS = float(os.environ.get("STORAGE_TTL_SECONDS", 1800.0))  # 30 mins
+STORAGE_TTL_MINUTES = float(os.environ.get("STORAGE_TTL_MINUTES", "30"))
+STORAGE_TTL_SECONDS = STORAGE_TTL_MINUTES * 60.0
 REQUEST_TIMEOUT = float(os.environ.get("REQUEST_TIMEOUT", "5"))
 YTDLP_TIMEOUT = float(os.environ.get("YTDLP_TIMEOUT", "15"))
 
@@ -73,6 +74,31 @@ def _media_type_from_extension(url: str) -> str | None:
         if path.endswith(ext):
             return mt
     return None
+
+
+def _probe_direct_media(url: str) -> tuple[bool, str | None, bool]:
+    """Determine if a URL is direct media. Returns (is_direct, media_type, head_returned_html)."""
+    # 1. Quick extension check
+    ext_type = _media_type_from_extension(url)
+
+    # 2. Probe with safe HEAD request (follow_redirects=False to respect per-hop checks)
+    media_type: str | None = None
+    head_returned_html = False
+    try:
+        with httpx.Client(timeout=REQUEST_TIMEOUT, follow_redirects=False) as client:
+            resp = client.head(url, headers={"User-Agent": "MediaDrop/1.0"})
+            ct = resp.headers.get("content-type", "")
+            media_type = _media_type_from_content_type(ct)
+            if ct.lower().startswith("text/html"):
+                head_returned_html = True
+    except Exception:
+        pass
+
+    if media_type is not None:
+        return True, media_type, head_returned_html
+    if ext_type is not None and not head_returned_html:
+        return True, ext_type, head_returned_html
+    return False, None, head_returned_html
 
 
 def _build_direct_media_info(url: str, media_type: str) -> MediaInfo:
@@ -170,25 +196,9 @@ def analyze(body: AnalyzeRequest):
             status_code=400,
         )
 
-    media_type: str | None = None
-    head_returned_html = False
-    try:
-        with httpx.Client(timeout=REQUEST_TIMEOUT, follow_redirects=True) as client:
-            resp = client.head(url, headers={"User-Agent": "MediaDrop/1.0"})
-            ct = resp.headers.get("content-type", "")
-            media_type = _media_type_from_content_type(ct)
-            if ct.lower().startswith("text/html"):
-                head_returned_html = True
-    except Exception:
-        pass
-
-    if media_type is not None:
+    is_direct, media_type, head_returned_html = _probe_direct_media(url)
+    if is_direct and media_type is not None:
         return _build_direct_media_info(url, media_type)
-
-    if not head_returned_html:
-        ext_type = _media_type_from_extension(url)
-        if ext_type is not None:
-            return _build_direct_media_info(url, ext_type)
 
     try:
         return _analyze_platform(url)
@@ -214,26 +224,27 @@ async def start_download(body: DownloadRequest):
             status_code=400,
         )
 
-    # Determine if direct or platform
-    is_direct = False
-    ext = _media_type_from_extension(url)
-    if ext:
-        is_direct = True
-    else:
-        try:
-            with httpx.Client(timeout=3.0, follow_redirects=True) as client:
-                r = client.head(url, headers={"User-Agent": "MediaDrop/1.0"})
-                if _media_type_from_content_type(r.headers.get("content-type", "")):
-                    is_direct = True
-        except Exception:
-            pass
+    is_direct, _, _ = _probe_direct_media(url)
+
+    # Check FFmpeg dependency when video/audio conversion is requested
+    if not is_direct and body.format.lower() in ("video", "audio", "mp3"):
+        if not shutil.which("ffmpeg"):
+            return JSONResponse(
+                {
+                    "code": "ffmpeg_missing",
+                    "message": "FFmpeg is required for conversion but not found on the system.",
+                },
+                status_code=500,
+            )
 
     job = job_manager.create_job(url=url, format=body.format, quality=body.quality)
 
-    # Start download task in background
-    asyncio.create_task(run_job(job.job_id, job_manager, is_direct=is_direct))
+    # Start download task in background and register for cancellation
+    task = asyncio.create_task(run_job(job.job_id, job_manager, is_direct=is_direct))
+    job_manager.register_task(job.job_id, task)
 
     return {"job_id": job.job_id, "status": "queued"}
+
 
 
 @app.get("/api/jobs/{job_id}")

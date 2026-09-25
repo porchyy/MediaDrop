@@ -156,6 +156,14 @@ export default function UrlInput() {
       currentJobId = downloadInit.job_id
       setJob({ job_id: currentJobId, status: downloadInit.status })
 
+      const fail = (kind = 'general') => {
+        if (!isCancelled && pending.current === operation) {
+          setErrorKind(kind)
+          setPhase('error')
+          pending.current = null
+        }
+      }
+
       const poll = async () => {
         if (isCancelled || pending.current !== operation) return
         try {
@@ -172,23 +180,13 @@ export default function UrlInput() {
             if (pending.current === operation) pending.current = null
             return
           } else if (statusData.status === 'failed') {
-            if (statusData.error_code === 'file_too_large') {
-              setErrorKind('too_large')
-            } else {
-              setErrorKind('general')
-            }
-            setPhase('error')
-            if (pending.current === operation) pending.current = null
+            fail(statusData.error_code === 'file_too_large' ? 'too_large' : 'general')
             return
           }
 
           pollTimer = setTimeout(poll, 1000)
         } catch (_) {
-          if (!isCancelled && pending.current === operation) {
-            setErrorKind('general')
-            setPhase('error')
-            pending.current = null
-          }
+          fail('general')
         }
       }
 
@@ -202,14 +200,15 @@ export default function UrlInput() {
     }
   }
 
-  const busy = phase === 'analyzing' || phase === 'preparing' || phase === 'downloading' || phase === 'processing'
+  const isTransferring = ['preparing', 'downloading', 'processing'].includes(phase)
+  const busy = phase === 'analyzing' || isTransferring
   const isReady = isValidMediaUrl(url.trim())
   const announcement =
     phase === 'analyzing'
       ? 'Analyzing link'
       : phase === 'result'
       ? 'Analysis result ready'
-      : phase === 'preparing' || phase === 'downloading' || phase === 'processing'
+      : isTransferring
       ? 'Downloading and preparing file'
       : phase === 'success'
       ? 'File ready for download'

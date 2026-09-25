@@ -4,7 +4,7 @@ import { getFileDownloadUrl } from '../api/downloadMedia'
 const FORMAT_DEFS = {
   MP3:       { icon: Music, heading: 'AUDIO QUALITY',     choices: ['Best', '320 kbps', '192 kbps', '128 kbps'], initial: 'Best',     availKey: 'audio'     },
   VIDEO:     { icon: Video, heading: 'VIDEO QUALITY',     choices: ['720p', '1080p', 'Best'],                    initial: 'Best',     availKey: 'video'     },
-  IMAGE:     { icon: Image, heading: 'IMAGE FORMAT',      choices: ['Original', 'JPG', 'PNG'],                   initial: 'Original', availKey: 'image'     },
+  IMAGE:     { icon: Image, heading: 'IMAGE FORMAT',      choices: ['Original'],                                  initial: 'Original', availKey: 'image'     },
   THUMBNAIL: { icon: Image, heading: 'THUMBNAIL FORMAT',  choices: ['Original'],                                  initial: 'Original', availKey: 'thumbnail' },
 }
 
