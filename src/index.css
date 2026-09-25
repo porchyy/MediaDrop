@@ -1,0 +1,469 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── CSS Variables — Pixel Palette ─────────────────────── */
+:root {
+  --bg: #f0f0f0;
+  --surface: #ffffff;
+  --accent: #4f46e5;
+  --border: #4f46e5;
+  --text: #1e1b4b;
+  --muted: #4b5563;        /* improved contrast for light mode */
+  --shadow: #1e1b4b;
+  --card-bg: #e8e8f0;
+  --on-accent: #ffffff;
+  --error: #b42318;
+}
+
+.dark {
+  --bg: #0d0d0d;
+  --surface: #1a1a2e;
+  --accent: #818cf8;
+  --border: #818cf8;
+  --text: #e2e8f0;
+  --muted: #94a3b8;        /* improved contrast for dark mode */
+  --shadow: #000000;
+  --card-bg: #16213e;
+  --on-accent: #0d0d0d;
+  --error: #ff9b91;
+}
+
+/* ─── Base Styles ────────────────────────────────────────── */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scrollbar-color: var(--border) var(--bg);
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: 'Courier New', Courier, monospace;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  min-height: 100vh;
+}
+
+/* ─── Pixel Utilities ────────────────────────────────────── */
+.pixel-border {
+  border: 2px solid var(--border);
+  box-shadow: 4px 4px 0 var(--shadow);
+}
+
+.pixel-border-sm {
+  border: 2px solid var(--border);
+  box-shadow: 2px 2px 0 var(--shadow);
+}
+
+/* ─── Pixel Button ───────────────────────────────────────── */
+.pixel-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  border: 2px solid var(--border);
+  box-shadow: 4px 4px 0 var(--shadow);
+  background-color: var(--accent);
+  color: var(--on-accent);
+  cursor: pointer;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.7rem;
+  padding: 0.9rem 2.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  outline: none;
+  transition: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.pixel-btn--full {
+  width: 100%;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.pixel-btn:hover {
+  filter: brightness(1.15);
+}
+
+.pixel-btn:active {
+  box-shadow: 2px 2px 0 var(--shadow);
+  transform: translate(2px, 2px);
+}
+
+.pixel-btn:disabled,
+.paste-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.pixel-btn:disabled:hover { filter: none; }
+
+.pixel-btn:focus-visible,
+.paste-btn:focus-visible,
+.theme-toggle:focus-visible,
+.result-option:focus-visible,
+.clear-btn:focus-visible {
+  outline: 3px solid var(--text);
+  outline-offset: 3px;
+}
+
+/* ─── Scanline Overlay (CRT effect) ─────────────────────── */
+.scanline-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.035) 2px,
+    rgba(0, 0, 0, 0.035) 4px
+  );
+}
+
+/* ─── Blinking Cursor ────────────────────────────────────── */
+@keyframes blink {
+  0%,
+  100% { opacity: 1; }
+  50%  { opacity: 0; }
+}
+
+.cursor-blink {
+  animation: blink 1s step-end infinite;
+  color: var(--accent);
+}
+
+/* ─── Pixel Input ────────────────────────────────────────── */
+.pixel-input {
+  width: 100%;
+  background-color: var(--surface);
+  color: var(--text);
+  border: 2px solid var(--border);
+  box-shadow: 4px 4px 0 var(--shadow);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1rem;
+  padding: 1rem 1.25rem;
+  outline: none;
+  transition: none;
+}
+
+.pixel-input::placeholder {
+  color: var(--muted);
+}
+
+/* Focus state — accent border + stronger shadow */
+.pixel-input--focused,
+.pixel-input:focus {
+  border-color: var(--accent);
+  box-shadow: 6px 6px 0 var(--shadow), 0 0 0 1px var(--accent);
+}
+
+/* ─── Paste Button (inside input) ───────────────────────── */
+.paste-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 2px solid var(--border);
+  box-shadow: 2px 2px 0 var(--shadow);
+  background-color: var(--surface);
+  color: var(--accent);
+  padding: 0.3rem 0.35rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: none;
+}
+
+.theme-toggle { min-width: 2.75rem; min-height: 2.75rem; }
+
+.paste-btn:hover {
+  background-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.paste-btn:active {
+  box-shadow: 1px 1px 0 var(--shadow);
+  transform: translateY(-50%) translate(1px, 1px);
+}
+
+/* ─── Analyze + Demo Result ─────────────────────────────── */
+.analyze-section,
+.analyze-form,
+.result-section,
+.result-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.analyze-section { gap: 2rem; }
+.analyze-form { gap: 0.75rem; }
+.analyze-actions { display: flex; flex-direction: column; gap: 0.75rem; }
+.analyze-actions .pixel-btn { min-height: 3.25rem; }
+.url-field { position: relative; }
+.pixel-input:disabled { opacity: 0.7; }
+
+.url-hint {
+  margin: -0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: center;
+  letter-spacing: 0.03em;
+}
+
+.error-card,
+.state-card {
+  background: var(--surface);
+  padding: 1rem;
+}
+
+.error-card { border-color: var(--error); }
+.error-card strong {
+  color: var(--error);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.6rem;
+  line-height: 1.6;
+}
+.error-card p { margin: 0.75rem 0 0; color: var(--text); font-size: 0.85rem; }
+.state-card { display: flex; flex-direction: column; gap: 1rem; }
+.state-card p,
+.result-state-title {
+  margin: 0;
+  color: var(--accent);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.65rem;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.activity-bar {
+  position: relative;
+  height: 1rem;
+  overflow: hidden;
+  border: 2px solid var(--border);
+  background: var(--card-bg);
+}
+.activity-bar span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  background: repeating-linear-gradient(90deg, var(--accent) 0 8px, transparent 8px 11px);
+  animation: pixel-load 1s steps(8) infinite;
+}
+@keyframes pixel-load {
+  from { left: -40%; }
+  to { left: 100%; }
+}
+.result-section { gap: 1rem; }
+.result-heading {
+  margin: 0;
+  color: var(--muted);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.6rem;
+  text-align: center;
+  scroll-margin-top: 1rem;
+}
+
+.result-card {
+  gap: 1.5rem;
+  padding: 1.5rem;
+  background: var(--surface);
+}
+
+.demo-badge {
+  align-self: flex-start;
+  border: 1px solid var(--border);
+  color: var(--accent);
+  font-size: 0.7rem;
+  font-weight: bold;
+  padding: 0.3rem 0.5rem;
+}
+
+.result-media {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.result-media > div:last-child { flex: 1; min-width: 0; }
+
+.result-thumbnail {
+  width: 7.5rem;
+  height: 5.5rem;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--border);
+  box-shadow: 3px 3px 0 var(--shadow);
+  background: repeating-linear-gradient(45deg, var(--card-bg) 0 12px, var(--surface) 12px 24px);
+  color: var(--accent);
+}
+
+.result-title {
+  margin: 0 0 0.5rem;
+  color: var(--text);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.75rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.result-meta { margin: 0; color: var(--muted); }
+.result-finish {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border-top: 2px solid var(--border);
+  padding-top: 1.25rem;
+}
+.result-summary { margin: 0; color: var(--text); text-align: center; font-weight: bold; }
+.result-fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.result-fieldset legend {
+  margin-bottom: 0.75rem;
+  color: var(--text);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.6rem;
+}
+
+.result-options { display: flex; flex-wrap: wrap; gap: 0.65rem; }
+.result-option {
+  flex: 1 1 6.5rem;
+  min-height: 3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem;
+  border: 2px solid var(--border);
+  box-shadow: 2px 2px 0 var(--shadow);
+  background: var(--card-bg);
+  color: var(--text);
+  cursor: pointer;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.55rem;
+}
+
+.result-option:hover { background: var(--surface); }
+.result-option--active,
+.result-option--active:hover {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 3px 3px 0 var(--shadow), 0 0 6px var(--accent);
+}
+
+.result-note,
+.download-message {
+  margin: 0.75rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.download-message { margin-top: -0.75rem; text-align: center; }
+.clear-btn {
+  align-self: center;
+  border: 0;
+  padding: 0.25rem;
+  min-height: 2.75rem;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.6rem;
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+}
+
+/* ─── Format Cards ───────────────────────────────────────── */
+.format-card {
+  background-color: var(--card-bg);
+  border: 2px solid var(--border);
+  box-shadow: 4px 4px 0 var(--shadow);
+  padding: 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: default;
+  transition: transform 0.05s, box-shadow 0.05s, background-color 0.15s;
+  user-select: none;
+}
+
+/* Visible hover effect */
+.format-card:hover {
+  box-shadow: 4px 6px 0 var(--shadow), 0 0 6px var(--accent);
+  transform: translateY(-3px);
+  background-color: var(--surface);
+  border-color: var(--accent);
+}
+
+/* ─── Section Divider ────────────────────────────────────── */
+.pixel-divider {
+  border: none;
+  border-top: 2px solid var(--border);
+  opacity: 0.3;
+  margin: 0;
+}
+
+/* ─── Mobile Responsive (< 640px) ───────────────────────── */
+@media (max-width: 640px) {
+  .result-media { flex-direction: column; align-items: stretch; }
+  .result-thumbnail { width: 100%; height: auto; aspect-ratio: 16 / 9; }
+  .result-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem; }
+  .result-option { min-width: 0; padding: 0.35rem 0.15rem; font-size: 0.5rem; }
+
+  /* Header logo text smaller */
+  .logo-text {
+    font-size: 0.55rem !important;
+  }
+
+  /* Hero headline smaller */
+  .hero-headline {
+    font-size: 0.85rem !important;
+  }
+
+  /* Cards → 1 column */
+  .formats-grid {
+    grid-template-columns: 1fr !important;
+    max-width: 220px;
+    margin: 0 auto;
+  }
+
+  /* Input font smaller */
+  .pixel-input {
+    font-size: 0.9rem;
+    padding: 0.85rem 3rem 0.85rem 1rem;
+  }
+
+  /* Button padding smaller */
+  .pixel-btn {
+    font-size: 0.6rem;
+    padding: 0.8rem 1rem;
+  }
+
+  /* Main section vertical gap tighter */
+  .main-content {
+    gap: 2rem !important;
+    padding-top: 2.5rem !important;
+    padding-bottom: 2.5rem !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .activity-bar { background: repeating-linear-gradient(90deg, var(--accent) 0 8px, var(--card-bg) 8px 12px); }
+  .activity-bar span { display: none; }
+  .cursor-blink { animation: none; }
+  body { transition: none; }
+  .format-card:hover { transform: none; }
+  .pixel-btn:active { transform: none; }
+}
