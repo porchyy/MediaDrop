@@ -14,8 +14,8 @@ export default function Header({ theme, onToggle }) {
         style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
       >
         {/* Logo & Status Badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }} aria-label="MediaDrop">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }} aria-label="MediaDrop">
             <div
               style={{
                 border: '2px solid var(--border)',
@@ -25,6 +25,7 @@ export default function Header({ theme, onToggle }) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                flexShrink: 0,
               }}
             >
               <Download size={14} color="#fff" strokeWidth={2.5} />
@@ -36,6 +37,7 @@ export default function Header({ theme, onToggle }) {
                 color: 'var(--text)',
                 letterSpacing: '-0.02em',
                 lineHeight: 1,
+                whiteSpace: 'nowrap',
               }}
               className="logo-text"
             >
@@ -43,7 +45,7 @@ export default function Header({ theme, onToggle }) {
             </span>
           </div>
 
-          <span className="status-badge" aria-label="System status: Online">
+          <span className="status-badge" aria-label="System status: Online" style={{ flexShrink: 0 }}>
             <span className="status-dot" aria-hidden="true" />
             ONLINE
           </span>

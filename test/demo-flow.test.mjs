@@ -431,6 +431,65 @@ test('Footer renders site-footer and low-contrast footer-copyright', async () =>
   }
 })
 
+test('UrlInput maintains layout stability and renders without layout-shifting inline padding', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { UrlInput } = await loadModules(server)
+    const html = renderToStaticMarkup(createElement(UrlInput))
+    // Ensures input padding does not jump between 1.25rem and 2.5rem
+    assert.doesNotMatch(html, /padding-left:\s*1\.25rem/)
+    assert.match(html, /pixel-input/)
+    assert.match(html, /paste-btn--cyan/)
+  } finally {
+    await server.close()
+  }
+})
+
+test('SupportedFormats renders semantic nav and ol structure for step guide strip', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { SupportedFormats } = await loadModules(server)
+    const html = renderToStaticMarkup(createElement(SupportedFormats, { isIdle: true }))
+    assert.match(html, /<nav class="step-guide-strip"/)
+    assert.match(html, /<ol class="step-guide-list"/)
+    assert.match(html, /01 PASTE/)
+    assert.match(html, /02 PICK/)
+    assert.match(html, /03 DOWNLOAD/)
+
+    // Hidden in non-idle mode
+    const nonIdleHtml = renderToStaticMarkup(createElement(SupportedFormats, { isIdle: false }))
+    assert.doesNotMatch(nonIdleHtml, /step-guide-strip/)
+  } finally {
+    await server.close()
+  }
+})
+
+test('ResultCard renders format-specific themes and halos for MP3, Video, and Image', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { ResultCard } = await loadModules(server)
+    const media = { title: 'Test Title', duration: 100, available_formats: ['video', 'audio', 'image'] }
+
+    // MP3 -> audio theme
+    const mp3Html = renderToStaticMarkup(createElement(ResultCard, { phase: 'result', format: 'MP3', quality: 'Best', media }))
+    assert.match(mp3Html, /data-format-theme="audio"/)
+    assert.match(mp3Html, /download-cta--audio/)
+
+    // Video -> video theme
+    const videoHtml = renderToStaticMarkup(createElement(ResultCard, { phase: 'result', format: 'VIDEO', quality: 'Best', media }))
+    assert.match(videoHtml, /data-format-theme="video"/)
+    assert.match(videoHtml, /download-cta--video/)
+
+    // Image -> image theme
+    const imageHtml = renderToStaticMarkup(createElement(ResultCard, { phase: 'result', format: 'IMAGE', quality: 'Original', media }))
+    assert.match(imageHtml, /data-format-theme="image"/)
+    assert.match(imageHtml, /download-cta--image/)
+  } finally {
+    await server.close()
+  }
+})
+
+
 
 
 

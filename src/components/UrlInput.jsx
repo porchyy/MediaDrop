@@ -255,7 +255,7 @@ export default function UrlInput({ onPhaseChange }) {
             placeholder="Paste your link here..."
             spellCheck={false}
             autoComplete="off"
-            style={{ paddingRight: '5.5rem', paddingLeft: isReady ? '2.5rem' : '1.25rem' }}
+            style={{ paddingRight: '5.5rem', paddingLeft: '2.5rem' }}
           />
           <button
             type="button"
