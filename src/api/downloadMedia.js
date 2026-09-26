@@ -1,8 +1,14 @@
-export async function startDownloadJob(url, format, quality) {
+export async function startDownloadJob(url, format, quality, options = {}) {
+  const { output_format, image_index, download_all } = options
+  const payload = { url, format, quality }
+  if (output_format !== undefined) payload.output_format = output_format
+  if (image_index !== undefined) payload.image_index = image_index
+  if (download_all !== undefined) payload.download_all = download_all
+
   const response = await fetch('/api/download', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url, format, quality }),
+    body: JSON.stringify(payload),
   })
   const data = await response.json()
   if (!response.ok) {

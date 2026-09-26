@@ -14,6 +14,9 @@ class Job:
     url: str
     format: str
     quality: str
+    output_format: str = "original"
+    image_index: int = 0
+    download_all: bool = False
     status: str = "queued"  # queued, downloading, processing, ready, failed, cancelled, expired
     progress: float | None = None
     downloaded_bytes: int = 0
@@ -51,7 +54,15 @@ class JobManager:
     def unregister_task(self, job_id: str) -> None:
         self._active_tasks.pop(job_id, None)
 
-    def create_job(self, url: str, format: str, quality: str) -> Job:
+    def create_job(
+        self,
+        url: str,
+        format: str,
+        quality: str,
+        output_format: str = "original",
+        image_index: int = 0,
+        download_all: bool = False,
+    ) -> Job:
         job_id = uuid.uuid4().hex[:12]
         file_id = uuid.uuid4().hex
         job = Job(
@@ -60,6 +71,9 @@ class JobManager:
             url=url,
             format=format,
             quality=quality,
+            output_format=output_format,
+            image_index=image_index,
+            download_all=download_all,
             status="queued",
             created_at=time.time(),
         )

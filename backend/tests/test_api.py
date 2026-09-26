@@ -7,11 +7,11 @@ requests are made.
 """
 
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from starlette.testclient import TestClient
 
-from app.main import app
+from app.main import app, job_manager
 
 client = TestClient(app, raise_server_exceptions=False)
 
@@ -180,6 +180,36 @@ class PlatformAnalyzerTest(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertIsNone(r.json()["duration"])
 
+    def test_analyze_tiktok_photo_success(self):
+        fake_images = [
+            {"index": 0, "url": "https://example.com/img1.jpg", "width": 1080, "height": 1920},
+            {"index": 1, "url": "https://example.com/img2.jpg", "width": 1080, "height": 1920},
+            {"index": 2, "url": "https://example.com/img3.jpg", "width": 1080, "height": 1920},
+        ]
+        with patch("app.main.is_safe_host", return_value=True), \
+             patch("app.main.extract_tiktok_photos", new_callable=AsyncMock) as mock_extract:
+            mock_extract.return_value = ("TikTok Sunset", fake_images)
+            r = api("POST", "/api/analyze", {"url": "https://www.tiktok.com/@creator/photo/7123456789012345678"})
+
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertEqual(data["media_type"], "gallery")
+        self.assertEqual(data["title"], "TikTok Sunset")
+        self.assertEqual(data["source"], "platform")
+        self.assertEqual(data["image_count"], 3)
+        self.assertEqual(len(data["images"]), 3)
+        self.assertEqual(data["thumbnail"], "https://example.com/img1.jpg")
+        self.assertEqual(data["available_formats"], ["image"])
+
+    def test_analyze_tiktok_photo_failure_returns_422(self):
+        with patch("app.main.is_safe_host", return_value=True), \
+             patch("app.main.extract_tiktok_photos", new_callable=AsyncMock) as mock_extract:
+            mock_extract.side_effect = RuntimeError("extraction error")
+            r = api("POST", "/api/analyze", {"url": "https://www.tiktok.com/@creator/photo/9999999999999999999"})
+
+        self.assertEqual(r.status_code, 422)
+        self.assertEqual(r.json()["code"], "unsupported_media")
+
 
 class DownloadApiTest(unittest.TestCase):
     def test_download_invalid_url_returns_400(self):
@@ -230,6 +260,33 @@ class DownloadApiTest(unittest.TestCase):
             r = api("POST", "/api/download", {"url": "https://youtube.com/watch?v=abc", "format": "video"})
         self.assertEqual(r.status_code, 500)
         self.assertEqual(r.json()["code"], "ffmpeg_missing")
+
+    def test_download_with_valid_output_format(self):
+        with patch("app.main.is_safe_host", return_value=True), \
+             patch("app.main.run_job") as mock_run:
+            mock_run.return_value = None
+            r = api("POST", "/api/download", {
+                "url": "https://example.com/cover.webp",
+                "format": "thumbnail",
+                "quality": "Original",
+                "output_format": "jpg",
+            })
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIn("job_id", data)
+        job = job_manager.get_job(data["job_id"])
+        self.assertIsNotNone(job)
+        self.assertEqual(job.output_format, "jpg")
+
+    def test_download_invalid_output_format_returns_400(self):
+        with patch("app.main.is_safe_host", return_value=True):
+            r = api("POST", "/api/download", {
+                "url": "https://example.com/image.png",
+                "format": "image",
+                "output_format": "invalid_format_xyz",
+            })
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["code"], "invalid_format")
 
 
 if __name__ == "__main__":

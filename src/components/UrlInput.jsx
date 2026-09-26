@@ -139,7 +139,9 @@ export default function UrlInput({ onPhaseChange }) {
         avail.includes('audio') ? 'MP3' :
         avail.includes('image') ? 'IMAGE' :
         avail.includes('thumbnail') ? 'THUMBNAIL' : 'VIDEO'
+      const initialQuality = (initialFormat === 'IMAGE' || initialFormat === 'THUMBNAIL') ? 'Original' : 'Best'
       setFormat(initialFormat)
+      setQuality(initialQuality)
       setMedia(result)
       setPhase('result')
     } catch (error) {
@@ -152,7 +154,7 @@ export default function UrlInput({ onPhaseChange }) {
     }
   }
 
-  const startDownload = async () => {
+  const startDownload = async (options = {}) => {
     if (phase !== 'result' || pending.current !== null) return
     setPhase('preparing')
     setJob(null)
@@ -171,7 +173,17 @@ export default function UrlInput({ onPhaseChange }) {
     pending.current = operation
 
     try {
-      const downloadInit = await startDownloadJob(url.trim(), format, quality)
+      const isImageOrThumb = format === 'IMAGE' || format === 'THUMBNAIL'
+      const outputFormat = (
+        options.output_format ||
+        (isImageOrThumb ? (quality || 'Original').toLowerCase() : 'original')
+      ).toLowerCase()
+
+      const downloadInit = await startDownloadJob(url.trim(), format, quality, {
+        output_format: outputFormat,
+        image_index: options.image_index ?? 0,
+        download_all: options.download_all ?? false,
+      })
       if (isCancelled || pending.current !== operation) return
 
       currentJobId = downloadInit.job_id

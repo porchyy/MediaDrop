@@ -1,12 +1,15 @@
 import asyncio
 import os
 import re
+import zipfile
 from pathlib import Path
 from urllib.parse import unquote, urljoin, urlsplit
 
 import httpx
 import yt_dlp
 
+from app.gallery_extractor import extract_tiktok_photos, is_tiktok_photo_url
+from app.image_processor import convert_image
 from app.jobs import Job, JobManager
 from app.security import is_safe_url
 
@@ -148,6 +151,25 @@ async def download_direct_file(job: Job, manager: JobManager) -> None:
                             prog = (downloaded / total_bytes * 100) if total_bytes else None
                             manager.update_job(job.job_id, downloaded_bytes=downloaded, total_bytes=total_bytes, progress=round(prog, 1) if prog is not None else None)
 
+                    # Convert image format if requested (jpg / png)
+                    if job.output_format.lower() in ("jpg", "jpeg", "png"):
+                        try:
+                            converted_path = convert_image(output_path, job.output_format)
+                            if converted_path.resolve() != output_path.resolve():
+                                output_path.unlink(missing_ok=True)
+                                output_path = converted_path
+                                filename = converted_path.name
+                            downloaded = output_path.stat().st_size
+                        except Exception as exc:
+                            output_path.unlink(missing_ok=True)
+                            manager.update_job(
+                                job.job_id,
+                                status="failed",
+                                error=f"Image conversion failed: {exc}",
+                                error_code="conversion_failed",
+                            )
+                            return
+
                     manager.update_job(
                         job.job_id,
                         status="ready",
@@ -242,6 +264,155 @@ def _extract_platform_thumbnail_url(page_url: str) -> str | None:
         return None
 
 
+def _cleanup_dir(job_dir: Path) -> None:
+    try:
+        for f in job_dir.iterdir():
+            if f.is_file() and f.name != "metadata.json":
+                f.unlink(missing_ok=True)
+    except Exception:
+        pass
+
+
+async def download_single_gallery_photo(job: Job, manager: JobManager) -> None:
+    """Download a single selected photo from a TikTok photo post."""
+    if manager.is_cancelled(job.job_id):
+        return
+    manager.update_job(job.job_id, status="downloading", progress=0.0)
+    try:
+        title, images = await extract_tiktok_photos(job.url, timeout=15.0)
+    except Exception as exc:
+        if not manager.is_cancelled(job.job_id):
+            manager.update_job(job.job_id, status="failed", error=f"Photo extraction failed: {exc}", error_code="download_failed")
+        return
+
+    if not images:
+        if not manager.is_cancelled(job.job_id):
+            manager.update_job(job.job_id, status="failed", error="No images found in gallery", error_code="download_failed")
+        return
+
+    idx = job.image_index if 0 <= job.image_index < len(images) else 0
+    target_url = images[idx]["url"]
+    original_url = job.url
+    job.url = target_url
+    try:
+        await download_direct_file(job, manager)
+    finally:
+        job.url = original_url
+
+
+async def download_gallery_bundle(job: Job, manager: JobManager) -> None:
+    """Download all photos in a TikTok post, convert them, and bundle as a clean sequential ZIP."""
+    if manager.is_cancelled(job.job_id):
+        return
+    job_dir = manager.storage_dir / job.job_id
+    job_dir.mkdir(parents=True, exist_ok=True)
+    manager.update_job(job.job_id, status="downloading", progress=0.0)
+
+    try:
+        title, images = await extract_tiktok_photos(job.url, timeout=15.0)
+    except Exception as exc:
+        manager.update_job(job.job_id, status="failed", error=f"Gallery extraction failed: {exc}", error_code="download_failed")
+        return
+
+    if not images:
+        manager.update_job(job.job_id, status="failed", error="No images found in gallery", error_code="download_failed")
+        return
+
+    match = re.search(r'/photo/(\d+)', job.url)
+    post_id = match.group(1) if match else job.job_id
+
+    fmt_lower = job.output_format.lower()
+    ext = "jpg" if fmt_lower in ("jpg", "jpeg") else "png" if fmt_lower == "png" else "original"
+    total_images = len(images)
+    converted_files: list[Path] = []
+    cumulative_bytes = 0
+    timeout = httpx.Timeout(READ_TIMEOUT, connect=CONNECT_TIMEOUT)
+
+    try:
+        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+            for idx, img_info in enumerate(images):
+                if manager.is_cancelled(job.job_id):
+                    _cleanup_dir(job_dir)
+                    return
+
+                img_url = img_info["url"]
+                raw_ext = Path(urlsplit(img_url).path).suffix or ".jpg"
+                raw_path = job_dir / f"raw_{idx+1}{raw_ext}"
+
+                async with client.stream("GET", img_url, headers={"User-Agent": "MediaDrop/1.0"}) as resp:
+                    if resp.status_code != 200:
+                        _cleanup_dir(job_dir)
+                        manager.update_job(job.job_id, status="failed", error=f"Server returned status {resp.status_code} on image {idx+1}", error_code="download_failed")
+                        return
+
+                    with open(raw_path, "wb") as f:
+                        async for chunk in resp.aiter_bytes(chunk_size=65536):
+                            if manager.is_cancelled(job.job_id):
+                                _cleanup_dir(job_dir)
+                                return
+                            f.write(chunk)
+                            cumulative_bytes += len(chunk)
+                            if cumulative_bytes > MAX_DOWNLOAD_SIZE:
+                                _cleanup_dir(job_dir)
+                                manager.update_job(job.job_id, status="failed", error="File exceeds the 500 MB limit", error_code="file_too_large")
+                                return
+
+                target_ext = raw_ext if fmt_lower == "original" else f".{ext}"
+                target_path = job_dir / f"{idx+1:02d}{target_ext}"
+
+                converted_path = convert_image(raw_path, job.output_format, output_path=target_path)
+                if converted_path.resolve() != raw_path.resolve() and raw_path.exists():
+                    raw_path.unlink(missing_ok=True)
+                converted_files.append(converted_path)
+
+                prog = ((idx + 1) / total_images) * 80.0
+                manager.update_job(job.job_id, progress=round(prog, 1), downloaded_bytes=cumulative_bytes)
+
+        if manager.is_cancelled(job.job_id):
+            _cleanup_dir(job_dir)
+            return
+
+        manager.update_job(job.job_id, status="processing", progress=85.0)
+
+        # Create ZIP archive (80% - 100%)
+        archive_suffix = ext if ext != "original" else "photos"
+        zip_name = f"{post_id}_photos_{archive_suffix}.zip"
+        zip_path = job_dir / zip_name
+
+        with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zip_file:
+            for file_path in converted_files:
+                if manager.is_cancelled(job.job_id):
+                    _cleanup_dir(job_dir)
+                    return
+                zip_file.write(file_path, arcname=file_path.name)
+
+        manager.update_job(job.job_id, progress=95.0)
+
+        # Clean up individual converted image files
+        for file_path in converted_files:
+            if file_path.resolve() != zip_path.resolve():
+                file_path.unlink(missing_ok=True)
+
+        final_size = zip_path.stat().st_size
+        if final_size > MAX_DOWNLOAD_SIZE:
+            _cleanup_dir(job_dir)
+            manager.update_job(job.job_id, status="failed", error="File exceeds the 500 MB limit", error_code="file_too_large")
+            return
+
+        manager.update_job(
+            job.job_id,
+            status="ready",
+            progress=100.0,
+            file_size=final_size,
+            filename=zip_name,
+            file_path=str(zip_path),
+        )
+    except Exception as exc:
+        _cleanup_dir(job_dir)
+        if not manager.is_cancelled(job.job_id):
+            manager.update_job(job.job_id, status="failed", error=str(exc), error_code="download_failed")
+
+
 async def run_job(job_id: str, manager: JobManager, is_direct: bool) -> None:
     async with _semaphore:
         job = manager.get_job(job_id)
@@ -250,7 +421,12 @@ async def run_job(job_id: str, manager: JobManager, is_direct: bool) -> None:
 
         async def _execute():
             loop = asyncio.get_running_loop()
-            if job.format.lower() == "thumbnail" and not is_direct:
+            if is_tiktok_photo_url(job.url):
+                if job.download_all:
+                    await download_gallery_bundle(job, manager)
+                else:
+                    await download_single_gallery_photo(job, manager)
+            elif job.format.lower() == "thumbnail" and not is_direct:
                 # Extract real thumbnail image URL from platform video
                 manager.update_job(job.job_id, status="downloading", progress=0.0)
                 thumb_url = await loop.run_in_executor(None, _extract_platform_thumbnail_url, job.url)

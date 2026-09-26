@@ -1,11 +1,12 @@
+import { useState, useEffect } from 'react'
 import { Download, Image, Music, Video } from 'lucide-react'
 import { getFileDownloadUrl } from '../api/downloadMedia'
 
 const FORMAT_DEFS = {
   MP3:       { icon: Music, heading: 'AUDIO QUALITY',     choices: ['Best', '320 kbps', '192 kbps', '128 kbps'], initial: 'Best',     availKey: 'audio',     theme: 'audio', optionClass: 'result-option--pink'  },
   VIDEO:     { icon: Video, heading: 'VIDEO QUALITY',     choices: ['720p', '1080p', 'Best'],                    initial: 'Best',     availKey: 'video',     theme: 'video', optionClass: 'result-option--purple' },
-  IMAGE:     { icon: Image, heading: 'IMAGE FORMAT',      choices: ['Original'],                                  initial: 'Original', availKey: 'image',     theme: 'image', optionClass: 'result-option--cyan'   },
-  THUMBNAIL: { icon: Image, heading: 'THUMBNAIL FORMAT',  choices: ['Original'],                                  initial: 'Original', availKey: 'thumbnail', theme: 'image', optionClass: 'result-option--cyan'   },
+  IMAGE:     { icon: Image, heading: 'IMAGE FORMAT',      choices: ['Original', 'JPG', 'PNG'],                    initial: 'Original', availKey: 'image',     theme: 'image', optionClass: 'result-option--cyan'   },
+  THUMBNAIL: { icon: Image, heading: 'THUMBNAIL FORMAT',  choices: ['Original', 'JPG', 'PNG'],                    initial: 'Original', availKey: 'thumbnail', theme: 'image', optionClass: 'result-option--cyan'   },
 }
 
 const mediaDuration = seconds =>
@@ -37,6 +38,25 @@ export default function ResultCard({
     ([, def]) => availableKeys.includes(def.availKey),
   )
 
+  const [imageIndex, setImageIndex] = useState(0)
+  const isGallery = media.media_type === 'gallery'
+  const images = media.images || []
+  const totalImages = media.image_count || images.length || 1
+  const currentImage = images[imageIndex] || { url: media.thumbnail }
+
+  useEffect(() => {
+    if (!isGallery || totalImages <= 1) return
+    const handleKeyDown = e => {
+      if (e.key === 'ArrowLeft') {
+        setImageIndex(i => (i > 0 ? i - 1 : totalImages - 1))
+      } else if (e.key === 'ArrowRight') {
+        setImageIndex(i => (i < totalImages - 1 ? i + 1 : 0))
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isGallery, totalImages])
+
   const isWorking = phase === 'preparing' || phase === 'downloading' || phase === 'processing'
   const stateTitle =
     phase === 'downloading'
@@ -65,9 +85,24 @@ export default function ResultCard({
         className={`result-card pixel-border-layered result-card--${themeKey}`}
         data-format-theme={themeKey}
       >
-        {/* Large 16:9 Thumbnail Hero */}
-        <div className="result-thumbnail-hero" role="img" aria-label="Media cover image">
-          {media.thumbnail ? (
+        {/* Large 16:9 Thumbnail Hero or Bounded Gallery Carousel */}
+        <div
+          className={`result-thumbnail-hero${isGallery ? ' gallery-hero' : ''}`}
+          role="img"
+          aria-label={isGallery ? `Photo ${imageIndex + 1} of ${totalImages}` : 'Media cover image'}
+        >
+          {isGallery && currentImage?.url ? (
+            <img
+              src={currentImage.url}
+              alt=""
+              className="result-hero-img"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+              }}
+            />
+          ) : media.thumbnail ? (
             <img
               src={media.thumbnail}
               alt=""
@@ -90,12 +125,37 @@ export default function ResultCard({
           )}
         </div>
 
+        {/* Gallery Carousel Navigation Dock */}
+        {isGallery && totalImages > 1 && (
+          <div className="carousel-dock" aria-label="Photo gallery navigation">
+            <button
+              type="button"
+              className="pixel-btn carousel-nav-btn"
+              aria-label="Previous image"
+              onClick={() => setImageIndex(i => (i > 0 ? i - 1 : totalImages - 1))}
+            >
+              &lt;
+            </button>
+            <span className="carousel-counter" aria-live="polite">
+              {imageIndex + 1} / {totalImages}
+            </span>
+            <button
+              type="button"
+              className="pixel-btn carousel-nav-btn"
+              aria-label="Next image"
+              onClick={() => setImageIndex(i => (i < totalImages - 1 ? i + 1 : 0))}
+            >
+              &gt;
+            </button>
+          </div>
+        )}
+
         {/* Media Title & Metadata Hierarchy */}
         <div className="result-info">
           <h2 className="result-title">{media.title}</h2>
           <div className="result-meta-bar">
             <p className="result-meta">
-              {displayPlatform} • {mediaDuration(media.duration)}
+              {displayPlatform} • {isGallery ? `${totalImages} ${totalImages === 1 ? 'IMAGE' : 'IMAGES'}` : mediaDuration(media.duration)}
             </p>
             <span className="detected-badge" aria-label="Media detected">
               <span className="detected-dot" aria-hidden="true">●</span> DETECTED
@@ -128,31 +188,68 @@ export default function ResultCard({
               <div className="result-options">
                 {FORMAT_DEFS[format]?.choices.map(choice => {
                   const isBest = choice.toLowerCase() === 'best'
+                  const isOriginal = choice.toLowerCase() === 'original'
+                  const isStarChoice = isBest || isOriginal
                   return (
                     <button
                       key={choice}
-                      className={`result-option ${isBest ? 'result-option--best' : ''}${quality === choice ? ' result-option--active' : ''}`}
+                      className={`result-option ${isStarChoice ? 'result-option--best' : ''}${quality === choice ? ' result-option--active' : ''}`}
                       type="button"
-                      aria-label={isBest ? 'Best quality (Recommended)' : choice}
+                      aria-label={isBest ? 'Best quality (Recommended)' : isOriginal ? 'Original (Recommended)' : choice}
                       aria-pressed={quality === choice}
                       onClick={() => onQualityChange(choice)}
                     >
-                      <span aria-hidden="true">{isBest ? '★ ' : ''}</span>
+                      {isBest && <span aria-hidden="true">★ </span>}
                       {choice}
+                      {isOriginal && <span aria-hidden="true"> ★</span>}
                     </button>
                   )
                 })}
               </div>
             </fieldset>
 
-            <button
-              className={`pixel-btn pixel-btn--full download-cta download-cta--${themeKey}`}
-              type="button"
-              onClick={onDownload}
-            >
-              <Download size={18} aria-hidden="true" />
-              DOWNLOAD {format}
-            </button>
+            {isGallery ? (
+              totalImages > 1 ? (
+                <div className="gallery-actions" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
+                  <button
+                    className={`pixel-btn pixel-btn--full download-cta download-cta--${themeKey}`}
+                    type="button"
+                    onClick={() => onDownload?.({ output_format: quality.toLowerCase(), image_index: imageIndex, download_all: false })}
+                  >
+                    <Download size={18} aria-hidden="true" />
+                    CURRENT IMAGE
+                  </button>
+                  <button
+                    className="pixel-btn pixel-btn--full download-cta download-cta--zip"
+                    type="button"
+                    onClick={() => onDownload?.({ output_format: quality.toLowerCase(), download_all: true })}
+                  >
+                    <Download size={18} aria-hidden="true" />
+                    ALL IMAGES (.ZIP)
+                  </button>
+                </div>
+              ) : (
+                <button
+                  className={`pixel-btn pixel-btn--full download-cta download-cta--${themeKey}`}
+                  type="button"
+                  onClick={() => onDownload?.({ output_format: quality.toLowerCase(), image_index: 0, download_all: false })}
+                >
+                  <Download size={18} aria-hidden="true" />
+                  DOWNLOAD IMAGE
+                </button>
+              )
+            ) : (
+              <button
+                className={`pixel-btn pixel-btn--full download-cta download-cta--${themeKey}`}
+                type="button"
+                onClick={() => onDownload?.({
+                  output_format: (format === 'THUMBNAIL' || format === 'IMAGE') ? quality.toLowerCase() : 'original',
+                })}
+              >
+                <Download size={18} aria-hidden="true" />
+                DOWNLOAD {format}
+              </button>
+            )}
           </>
         ) : (
           <div className="result-finish">

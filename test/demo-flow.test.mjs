@@ -196,6 +196,21 @@ test('downloadMedia module starts, polls, and cancels jobs correctly', async () 
     assert.equal(startRes.job_id, 'job123')
     assert.equal(startRes.status, 'queued')
 
+    // 1b. Start download with options (output_format, image_index, download_all)
+    let dispatchedPayload = null
+    globalThis.fetch = async (path, options) => {
+      dispatchedPayload = JSON.parse(options.body)
+      return { ok: true, json: async () => ({ job_id: 'job456', status: 'queued' }) }
+    }
+    await startDownloadJob('https://example.com/thumb', 'thumbnail', 'Original', {
+      output_format: 'jpg',
+      image_index: 2,
+      download_all: true,
+    })
+    assert.equal(dispatchedPayload.output_format, 'jpg')
+    assert.equal(dispatchedPayload.image_index, 2)
+    assert.equal(dispatchedPayload.download_all, true)
+
     // 2. Poll job status
     globalThis.fetch = async (path) => {
       assert.equal(path, '/api/jobs/job123')
@@ -307,6 +322,30 @@ test('ResultCard renders Best quality choice with star badge styling', async () 
     assert.match(html, /★/)
     assert.match(html, /Best quality \(Recommended\)/)
     assert.match(html, /result-option--best/)
+  } finally {
+    await server.close()
+  }
+})
+
+test('ResultCard renders THUMBNAIL format options with Original ★, JPG, and PNG choices', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { ResultCard } = await loadModules(server)
+    const media = {
+      title: 'Video with Cover',
+      duration: 120,
+      media_type: 'video',
+      thumbnail: 'https://example.com/cover.webp',
+      available_formats: ['video', 'audio', 'thumbnail'],
+    }
+    const html = renderToStaticMarkup(createElement(ResultCard, { phase: 'result', format: 'THUMBNAIL', quality: 'Original', media }))
+    assert.match(html, /THUMBNAIL FORMAT/)
+    assert.match(html, /Original/)
+    assert.match(html, /★/)
+    assert.match(html, /JPG/)
+    assert.match(html, /PNG/)
+    assert.doesNotMatch(html, /720p/)
+    assert.doesNotMatch(html, /1080p/)
   } finally {
     await server.close()
   }
@@ -484,6 +523,62 @@ test('ResultCard renders format-specific themes and halos for MP3, Video, and Im
     const imageHtml = renderToStaticMarkup(createElement(ResultCard, { phase: 'result', format: 'IMAGE', quality: 'Original', media }))
     assert.match(imageHtml, /data-format-theme="image"/)
     assert.match(imageHtml, /download-cta--image/)
+  } finally {
+    await server.close()
+  }
+})
+
+// ── Phase 8.8.1: TikTok Photo Posts & Carousel ───────────────────────────────
+
+test('ResultCard renders multi-image gallery with carousel dock, counter, and action buttons', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { ResultCard } = await loadModules(server)
+    const media = {
+      title: 'TikTok Photo Post with 5 Photos',
+      media_type: 'gallery',
+      image_count: 5,
+      images: [
+        { index: 0, url: 'https://example.com/1.jpg' },
+        { index: 1, url: 'https://example.com/2.jpg' },
+        { index: 2, url: 'https://example.com/3.jpg' },
+        { index: 3, url: 'https://example.com/4.jpg' },
+        { index: 4, url: 'https://example.com/5.jpg' },
+      ],
+      available_formats: ['image'],
+    }
+
+    const html = renderToStaticMarkup(createElement(ResultCard, { phase: 'result', format: 'IMAGE', quality: 'Original', media }))
+    assert.match(html, /5 IMAGES/)
+    assert.match(html, /gallery-hero/)
+    assert.match(html, /carousel-dock/)
+    assert.match(html, /carousel-nav-btn/)
+    assert.match(html, /1 \/ 5/)
+    assert.match(html, /CURRENT IMAGE/)
+    assert.match(html, /ALL IMAGES \(\.ZIP\)/)
+    assert.match(html, /download-cta--zip/)
+  } finally {
+    await server.close()
+  }
+})
+
+test('ResultCard renders single-image gallery without carousel controls or ZIP button', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { ResultCard } = await loadModules(server)
+    const media = {
+      title: 'TikTok Single Photo Post',
+      media_type: 'gallery',
+      image_count: 1,
+      images: [{ index: 0, url: 'https://example.com/solo.jpg' }],
+      available_formats: ['image'],
+    }
+
+    const html = renderToStaticMarkup(createElement(ResultCard, { phase: 'result', format: 'IMAGE', quality: 'Original', media }))
+    assert.match(html, /1 IMAGE/)
+    assert.doesNotMatch(html, /carousel-dock/)
+    assert.doesNotMatch(html, /ALL IMAGES \(\.ZIP\)/)
+    assert.match(html, /DOWNLOAD IMAGE/)
   } finally {
     await server.close()
   }

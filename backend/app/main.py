@@ -7,10 +7,13 @@ from urllib.parse import urlsplit
 
 import httpx
 import yt_dlp
+from typing import Any
+
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
+from app.gallery_extractor import extract_tiktok_photos, is_tiktok_photo_url
 from app.downloader import run_job
 from app.jobs import job_manager
 from app.security import is_safe_host, is_safe_url, validate_url_syntax
@@ -32,6 +35,7 @@ _EXTENSION_TYPES: dict[str, str] = {
 
 _AVAILABLE_FORMATS: dict[str, list[str]] = {
     "image": ["image"],
+    "gallery": ["image"],
     "video": ["video", "audio"],
     "audio": ["audio"],
 }
@@ -44,6 +48,8 @@ class MediaInfo(BaseModel):
     duration: int | None
     source: str
     available_formats: list[str]
+    image_count: int | None = None
+    images: list[dict[str, Any]] | None = None
 
 
 class AnalyzeRequest(BaseModel):
@@ -53,7 +59,10 @@ class AnalyzeRequest(BaseModel):
 class DownloadRequest(BaseModel):
     url: str
     format: str = "video"
-    quality: str = "Best"
+    quality: str | None = "Best"
+    output_format: str = "original"
+    image_index: int = 0
+    download_all: bool = False
 
 
 class _UnsupportedMedia(Exception):
@@ -180,21 +189,34 @@ def health():
 
 
 @app.post("/api/analyze")
-def analyze(body: AnalyzeRequest):
+async def analyze(body: AnalyzeRequest):
     url = (body.url or "").strip()
 
     valid, hostname = validate_url_syntax(url)
-    if not valid or not hostname:
+    if not valid or not hostname or not is_safe_host(hostname):
         return JSONResponse(
             {"code": "invalid_url", "message": "Please enter a valid HTTP or HTTPS URL."},
             status_code=400,
         )
 
-    if not is_safe_host(hostname):
-        return JSONResponse(
-            {"code": "invalid_url", "message": "Please enter a valid HTTP or HTTPS URL."},
-            status_code=400,
-        )
+    if is_tiktok_photo_url(url):
+        try:
+            title, images = await extract_tiktok_photos(url, timeout=YTDLP_TIMEOUT)
+            return MediaInfo(
+                title=title,
+                media_type="gallery",
+                thumbnail=images[0]["url"] if images else None,
+                duration=None,
+                source="platform",
+                available_formats=["image"],
+                image_count=len(images),
+                images=images,
+            )
+        except Exception:
+            return JSONResponse(
+                {"code": "unsupported_media", "message": "This link is currently not supported."},
+                status_code=422,
+            )
 
     is_direct, media_type, head_returned_html = _probe_direct_media(url)
     if is_direct and media_type is not None:
@@ -226,6 +248,13 @@ async def start_download(body: DownloadRequest):
 
     is_direct, _, _ = _probe_direct_media(url)
 
+    output_fmt = (body.output_format or "original").strip().lower()
+    if output_fmt not in ("original", "jpg", "jpeg", "png"):
+        return JSONResponse(
+            {"code": "invalid_format", "message": "Invalid image output format."},
+            status_code=400,
+        )
+
     # Check FFmpeg dependency when video/audio conversion is requested
     if not is_direct and body.format.lower() in ("video", "audio", "mp3"):
         if not shutil.which("ffmpeg"):
@@ -237,7 +266,14 @@ async def start_download(body: DownloadRequest):
                 status_code=500,
             )
 
-    job = job_manager.create_job(url=url, format=body.format, quality=body.quality)
+    job = job_manager.create_job(
+        url=url,
+        format=body.format,
+        quality=body.quality or "Best",
+        output_format=output_fmt,
+        image_index=body.image_index,
+        download_all=body.download_all,
+    )
 
     # Start download task in background and register for cancellation
     task = asyncio.create_task(run_job(job.job_id, job_manager, is_direct=is_direct))
