@@ -39,7 +39,7 @@ export default function Hero() {
           letterSpacing: '0.08em',
         }}
       >
-        Fast • Simple • Colorful
+        PASTE • PICK • DOWNLOAD
       </p>
     </section>
   )

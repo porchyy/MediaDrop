@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Search, Clipboard } from 'lucide-react'
+import { Clipboard } from 'lucide-react'
 import { analyzeMedia } from '../api/analyzeMedia'
 import { startDownloadJob, pollJobStatus, cancelDownloadJob } from '../api/downloadMedia'
 import ResultCard from './ResultCard'
@@ -240,6 +240,9 @@ export default function UrlInput({ onPhaseChange }) {
       <p className="sr-only" role="status">{announcement}</p>
       <form onSubmit={analyze} noValidate className="analyze-form">
         <div className="url-field">
+          <span className="url-input-icon" aria-hidden="true">
+            {isReady && <span className="url-valid-check">✓</span>}
+          </span>
           <input
             className="pixel-input"
             type="url"
@@ -252,7 +255,7 @@ export default function UrlInput({ onPhaseChange }) {
             placeholder="Paste your link here..."
             spellCheck={false}
             autoComplete="off"
-            style={{ paddingRight: '5rem' }}
+            style={{ paddingRight: '5.5rem', paddingLeft: isReady ? '2.5rem' : '1.25rem' }}
           />
           <button
             type="button"
@@ -260,7 +263,7 @@ export default function UrlInput({ onPhaseChange }) {
             disabled={busy}
             title="Paste from clipboard"
             aria-label="Paste from clipboard"
-            className="paste-btn"
+            className="paste-btn paste-btn--cyan"
           >
             <Clipboard size={14} />
             <span className="paste-text">PASTE</span>

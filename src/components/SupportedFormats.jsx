@@ -1,26 +1,16 @@
 import { Music, Video, Image } from 'lucide-react'
 
 const FORMATS = [
-  { icon: Music, label: 'MP3', desc: 'Audio' },
-  { icon: Video, label: 'Video', desc: 'MP4 / WebM' },
-  { icon: Image, label: 'Image', desc: 'JPG / PNG' },
+  { icon: Music, label: 'MP3', desc: 'Audio', theme: 'audio' },
+  { icon: Video, label: 'Video', desc: 'MP4 / WebM', theme: 'video' },
+  { icon: Image, label: 'Image', desc: 'JPG / PNG', theme: 'image' },
 ]
 
-export default function SupportedFormats() {
+export default function SupportedFormats({ isIdle = true }) {
   return (
-    <section style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <section className="supported-formats-section">
       {/* Section label */}
-      <p
-        style={{
-          fontFamily: '"Press Start 2P", monospace',
-          fontSize: '0.55rem',
-          color: 'var(--muted)',
-          textAlign: 'center',
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
-          margin: 0,
-        }}
-      >
+      <p className="formats-heading">
         Media Formats
       </p>
 
@@ -28,51 +18,30 @@ export default function SupportedFormats() {
       <hr className="pixel-divider" />
 
       {/* Cards row */}
-      <div
-        className="formats-grid"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: '1rem',
-        }}
-      >
-        {FORMATS.map(({ icon: Icon, label, desc }) => (
-          <div key={label} className="format-card">
-            <div
-              style={{
-                border: '2px solid var(--border)',
-                boxShadow: '2px 2px 0 var(--shadow)',
-                backgroundColor: 'var(--accent)',
-                padding: '0.5rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
+      <div className="formats-grid">
+        {FORMATS.map(({ icon: Icon, label, desc, theme }) => (
+          <div key={label} className={`format-card format-card--${theme}`}>
+            <div className={`format-card-icon format-card-icon--${theme}`}>
               <Icon size={20} color="#fff" strokeWidth={2} />
             </div>
-            <span
-              style={{
-                fontFamily: '"Press Start 2P", monospace',
-                fontSize: '0.6rem',
-                color: 'var(--text)',
-                letterSpacing: '0.05em',
-              }}
-            >
-              {label}
-            </span>
-            <span
-              style={{
-                fontFamily: '"Courier New", Courier, monospace',
-                fontSize: '0.75rem',
-                color: 'var(--muted)',
-              }}
-            >
-              {desc}
-            </span>
+            <span className="format-card-label">{label}</span>
+            <span className="format-card-desc">{desc}</span>
           </div>
         ))}
       </div>
+
+      {/* Step Guide Strip (01 PASTE ➔ 02 PICK ➔ 03 DOWNLOAD) — Idle Mode Only */}
+      {isIdle && (
+        <nav className="step-guide-strip" aria-label="Workflow guide">
+          <ol className="step-guide-list">
+            <li className="step-pill">01 PASTE</li>
+            <li className="step-arrow" aria-hidden="true">➔</li>
+            <li className="step-pill">02 PICK</li>
+            <li className="step-arrow" aria-hidden="true">➔</li>
+            <li className="step-pill">03 DOWNLOAD</li>
+          </ol>
+        </nav>
+      )}
     </section>
   )
 }

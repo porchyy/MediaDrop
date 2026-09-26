@@ -12,10 +12,11 @@ async function loadModules(server) {
   const { default: Footer } = await server.ssrLoadModule('/src/components/Footer.jsx')
   const { default: Hero } = await server.ssrLoadModule('/src/components/Hero.jsx')
   const { default: UrlInput, isValidMediaUrl, getPlatformName } = await server.ssrLoadModule('/src/components/UrlInput.jsx')
+  const { default: SupportedFormats } = await server.ssrLoadModule('/src/components/SupportedFormats.jsx')
   const { default: ResultCard } = await server.ssrLoadModule('/src/components/ResultCard.jsx')
   const { analyzeMedia } = await server.ssrLoadModule('/src/api/analyzeMedia.js')
   const { startDownloadJob, pollJobStatus, cancelDownloadJob, getFileDownloadUrl } = await server.ssrLoadModule('/src/api/downloadMedia.js')
-  return { App, Header, Footer, Hero, UrlInput, isValidMediaUrl, getPlatformName, ResultCard, analyzeMedia, startDownloadJob, pollJobStatus, cancelDownloadJob, getFileDownloadUrl }
+  return { App, Header, Footer, Hero, UrlInput, SupportedFormats, isValidMediaUrl, getPlatformName, ResultCard, analyzeMedia, startDownloadJob, pollJobStatus, cancelDownloadJob, getFileDownloadUrl }
 }
 
 // ── URL validation & Platform detection ───────────────────────────────────────
@@ -246,7 +247,7 @@ test('Hero renders playful decorations and subtitle', async () => {
   try {
     const { Hero } = await loadModules(server)
     const html = renderToStaticMarkup(createElement(Hero))
-    assert.match(html, /Fast • Simple • Colorful/)
+    assert.match(html, /PASTE • PICK • DOWNLOAD/)
     assert.match(html, /✦/)
   } finally {
     await server.close()
@@ -363,6 +364,77 @@ test('ResultCard renders ambient card decorations and retains format theme durin
     await server.close()
   }
 })
+
+// ── Phase 8.7: Visual Depth & Product Polish ─────────────────────────────────
+
+test('App renders bg-depth-layer for visual depth and atmospheric lighting', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { App } = await loadModules(server)
+    const html = renderToStaticMarkup(createElement(App))
+    assert.match(html, /bg-depth-layer/)
+  } finally {
+    await server.close()
+  }
+})
+
+test('Header renders status-badge with ONLINE indicator', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { Header } = await loadModules(server)
+    const html = renderToStaticMarkup(createElement(Header, { theme: 'dark', onToggle: () => {} }))
+    assert.match(html, /status-badge/)
+    assert.match(html, /ONLINE/)
+  } finally {
+    await server.close()
+  }
+})
+
+test('UrlInput renders paste-btn--cyan and tactile input icons', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { UrlInput } = await loadModules(server)
+    const html = renderToStaticMarkup(createElement(UrlInput))
+    assert.match(html, /paste-btn--cyan/)
+    assert.match(html, /url-input-icon/)
+  } finally {
+    await server.close()
+  }
+})
+
+test('SupportedFormats renders format identity classes and step guide strip', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { SupportedFormats } = await loadModules(server)
+    const html = renderToStaticMarkup(createElement(SupportedFormats))
+    assert.match(html, /format-card--audio/)
+    assert.match(html, /format-card--video/)
+    assert.match(html, /format-card--image/)
+    assert.match(html, /step-guide-strip/)
+    assert.match(html, /01 PASTE/)
+    assert.match(html, /02 PICK/)
+    assert.match(html, /03 DOWNLOAD/)
+  } finally {
+    await server.close()
+  }
+})
+
+test('Footer renders site-footer and low-contrast footer-copyright', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { Footer } = await loadModules(server)
+    const html = renderToStaticMarkup(createElement(Footer))
+    assert.match(html, /site-footer/)
+    assert.match(html, /footer-copyright/)
+  } finally {
+    await server.close()
+  }
+})
+
+
+
+
+
 
 
 

@@ -13,32 +13,39 @@ export default function Header({ theme, onToggle }) {
         className="max-w-2xl mx-auto px-6 py-4"
         style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
       >
-        {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }} aria-label="MediaDrop">
-          <div
-            style={{
-              border: '2px solid var(--border)',
-              boxShadow: '2px 2px 0 var(--shadow)',
-              backgroundColor: 'var(--accent-purple)',
-              padding: '0.35rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Download size={14} color="#fff" strokeWidth={2.5} />
+        {/* Logo & Status Badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }} aria-label="MediaDrop">
+            <div
+              style={{
+                border: '2px solid var(--border)',
+                boxShadow: '2px 2px 0 var(--shadow)',
+                backgroundColor: 'var(--accent-purple)',
+                padding: '0.35rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Download size={14} color="#fff" strokeWidth={2.5} />
+            </div>
+            <span
+              style={{
+                fontFamily: 'var(--font-pixel)',
+                fontSize: '0.75rem',
+                color: 'var(--text)',
+                letterSpacing: '-0.02em',
+                lineHeight: 1,
+              }}
+              className="logo-text"
+            >
+              Media<span style={{ color: 'var(--accent-pink)' }}>Drop</span>
+            </span>
           </div>
-          <span
-            style={{
-              fontFamily: 'var(--font-pixel)',
-              fontSize: '0.75rem',
-              color: 'var(--text)',
-              letterSpacing: '-0.02em',
-              lineHeight: 1,
-            }}
-            className="logo-text"
-          >
-            Media<span style={{ color: 'var(--accent-pink)' }}>Drop</span>
+
+          <span className="status-badge" aria-label="System status: Online">
+            <span className="status-dot" aria-hidden="true" />
+            ONLINE
           </span>
         </div>
 
