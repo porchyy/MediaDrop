@@ -1,6 +1,13 @@
 export default function Hero() {
   return (
-    <section style={{ textAlign: 'center' }}>
+    <section className="hero-section" style={{ textAlign: 'center', position: 'relative' }}>
+      <div className="hero-decorations" aria-hidden="true">
+        <span className="hero-star hero-star--left pixel-star-twinkle">✦</span>
+        <span className="hero-dot hero-dot--left">▪</span>
+        <span className="hero-star hero-star--right pixel-star-twinkle">✦</span>
+        <span className="hero-dot hero-dot--right">▪</span>
+      </div>
+
       {/* Main headline */}
       <h1
         className="hero-headline"
@@ -9,7 +16,7 @@ export default function Hero() {
           fontSize: 'clamp(1rem, 3vw, 1.5rem)',
           color: 'var(--text)',
           lineHeight: 1.6,
-          marginBottom: '1.5rem',
+          marginBottom: '1rem',
           letterSpacing: '-0.02em',
         }}
       >
@@ -23,17 +30,16 @@ export default function Hero() {
 
       {/* Subtitle */}
       <p
+        className="hero-subtitle"
         style={{
-          fontFamily: '"Courier New", Courier, monospace',
-          fontSize: '1rem',
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: '0.65rem',
           color: 'var(--muted)',
           margin: 0,
-          letterSpacing: '0.03em',
+          letterSpacing: '0.08em',
         }}
       >
-        Download audio, video and images
-        <br />
-        from any link — fast &amp; private.
+        Fast • Simple • Colorful
       </p>
     </section>
   )

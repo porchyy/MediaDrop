@@ -2,10 +2,10 @@ import { Download, Image, Music, Video } from 'lucide-react'
 import { getFileDownloadUrl } from '../api/downloadMedia'
 
 const FORMAT_DEFS = {
-  MP3:       { icon: Music, heading: 'AUDIO QUALITY',     choices: ['Best', '320 kbps', '192 kbps', '128 kbps'], initial: 'Best',     availKey: 'audio'     },
-  VIDEO:     { icon: Video, heading: 'VIDEO QUALITY',     choices: ['720p', '1080p', 'Best'],                    initial: 'Best',     availKey: 'video'     },
-  IMAGE:     { icon: Image, heading: 'IMAGE FORMAT',      choices: ['Original'],                                  initial: 'Original', availKey: 'image'     },
-  THUMBNAIL: { icon: Image, heading: 'THUMBNAIL FORMAT',  choices: ['Original'],                                  initial: 'Original', availKey: 'thumbnail' },
+  MP3:       { icon: Music, heading: 'AUDIO QUALITY',     choices: ['Best', '320 kbps', '192 kbps', '128 kbps'], initial: 'Best',     availKey: 'audio',     theme: 'audio', optionClass: 'result-option--pink'  },
+  VIDEO:     { icon: Video, heading: 'VIDEO QUALITY',     choices: ['720p', '1080p', 'Best'],                    initial: 'Best',     availKey: 'video',     theme: 'video', optionClass: 'result-option--purple' },
+  IMAGE:     { icon: Image, heading: 'IMAGE FORMAT',      choices: ['Original'],                                  initial: 'Original', availKey: 'image',     theme: 'image', optionClass: 'result-option--cyan'   },
+  THUMBNAIL: { icon: Image, heading: 'THUMBNAIL FORMAT',  choices: ['Original'],                                  initial: 'Original', availKey: 'thumbnail', theme: 'image', optionClass: 'result-option--cyan'   },
 }
 
 const mediaDuration = seconds =>
@@ -50,13 +50,21 @@ export default function ResultCard({
   const progressPercent = job?.progress
   const downloadedMb = job?.downloaded_bytes ? formatBytes(job.downloaded_bytes) : null
   const displayPlatform = platform || (media.media_type ?? media.type ?? 'MEDIA').toUpperCase()
+  const themeKey = FORMAT_DEFS[format]?.theme || 'video'
 
   return (
-    <section className="result-section" aria-label="Analysis result">
+    <section className="result-section" aria-label="Analysis result" style={{ position: 'relative' }}>
+      <div className="card-decorations" aria-hidden="true">
+        <span className="card-star card-star--top pixel-star-twinkle">✦</span>
+        <span className="card-dot card-dot--bottom">▪</span>
+      </div>
       <p className="result-heading" ref={headingRef}>
         {phase === 'result' ? 'RESULT' : isWorking ? 'DOWNLOADING' : 'FILE READY'}
       </p>
-      <div className="result-card pixel-border">
+      <div
+        className={`result-card pixel-border-layered result-card--${themeKey}`}
+        data-format-theme={themeKey}
+      >
         {/* Large 16:9 Thumbnail Hero */}
         <div className="result-thumbnail-hero" role="img" aria-label="Media cover image">
           {media.thumbnail ? (
@@ -100,10 +108,10 @@ export default function ResultCard({
             <fieldset className="result-fieldset">
               <legend>FORMAT</legend>
               <div className="result-options">
-                {visibleFormats.map(([name, { icon: Icon }]) => (
+                {visibleFormats.map(([name, { icon: Icon, optionClass }]) => (
                   <button
                     key={name}
-                    className={`result-option${format === name ? ' result-option--active' : ''}`}
+                    className={`result-option ${optionClass || ''}${format === name ? ' result-option--active' : ''}`}
                     type="button"
                     aria-pressed={format === name}
                     onClick={() => onFormatChange(name, FORMAT_DEFS[name].initial)}
@@ -118,21 +126,30 @@ export default function ResultCard({
             <fieldset className="result-fieldset">
               <legend>{FORMAT_DEFS[format]?.heading || 'QUALITY'}</legend>
               <div className="result-options">
-                {FORMAT_DEFS[format]?.choices.map(choice => (
-                  <button
-                    key={choice}
-                    className={`result-option${quality === choice ? ' result-option--active' : ''}`}
-                    type="button"
-                    aria-pressed={quality === choice}
-                    onClick={() => onQualityChange(choice)}
-                  >
-                    {choice}
-                  </button>
-                ))}
+                {FORMAT_DEFS[format]?.choices.map(choice => {
+                  const isBest = choice.toLowerCase() === 'best'
+                  return (
+                    <button
+                      key={choice}
+                      className={`result-option ${isBest ? 'result-option--best' : ''}${quality === choice ? ' result-option--active' : ''}`}
+                      type="button"
+                      aria-label={isBest ? 'Best quality (Recommended)' : choice}
+                      aria-pressed={quality === choice}
+                      onClick={() => onQualityChange(choice)}
+                    >
+                      <span aria-hidden="true">{isBest ? '★ ' : ''}</span>
+                      {choice}
+                    </button>
+                  )
+                })}
               </div>
             </fieldset>
 
-            <button className="pixel-btn pixel-btn--full download-cta" type="button" onClick={onDownload}>
+            <button
+              className={`pixel-btn pixel-btn--full download-cta download-cta--${themeKey}`}
+              type="button"
+              onClick={onDownload}
+            >
               <Download size={18} aria-hidden="true" />
               DOWNLOAD {format}
             </button>
@@ -159,16 +176,16 @@ export default function ResultCard({
 
             {phase === 'success' && (
               <div style={{ marginTop: '0.75rem', width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div style={{ padding: '0.75rem 1rem', background: 'var(--card-bg)', borderRadius: '4px', fontSize: '0.85rem' }}>
-                  {job?.filename && <p style={{ fontWeight: '600', wordBreak: 'break-all', margin: 0 }}>{job.filename}</p>}
-                  <p style={{ color: 'var(--muted)', fontSize: '0.8rem', marginTop: '0.25rem', marginBottom: 0 }}>
+                <div className="file-info-box pixel-border-sm">
+                  {job?.filename && <p className="file-info-name">{job.filename}</p>}
+                  <p className="file-info-meta">
                     {formatBytes(job?.file_size)} • Expires in 30 minutes
                   </p>
                 </div>
 
                 {job?.file_id ? (
                   <a
-                    className="pixel-btn pixel-btn--full download-cta"
+                    className="pixel-btn pixel-btn--full download-cta download-file-btn"
                     href={getFileDownloadUrl(job.file_id)}
                     download={job.filename || true}
                     style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem' }}

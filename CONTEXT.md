@@ -63,3 +63,13 @@ analyzer สำหรับ URL ของแพลตฟอร์มสื่อ
 
 **Source**:
 ค่าบอกว่า MediaInfo มาจาก analyzer ตัวใด ได้แก่ `direct` (Direct Media Analyzer) หรือ `platform` (Platform Analyzer) ใช้สำหรับ debugging ไม่แสดงใน UI
+
+**Format Theme**:
+ชุดสีและโทนบรรยากาศเฉพาะของแต่ละ Format (MP3 = Pink, VIDEO = Purple, IMAGE/THUMBNAIL = Cyan) ควบคุมสีไฮไลต์ของกรอบการ์ด ปุ่ม Action CTA และแถบความคืบหน้า เพื่อสื่อสารประเภทผลลัพธ์ผ่านสีอย่างชัดเจน
+
+**Layered Result Card**:
+โครงสร้างของ Result Card แบบมีมิติซ้อนชั้น (Retro Offset Shadow ภายนอก และ Segmented Inset/Surface Panels ภายใน) ให้ความรู้สึกจับต้องได้แบบแผ่นการ์ดเรโทร โดยคงความกระชับและไม่ลดทอนความเร็วในการอ่านข้อมูล
+
+**Ambient Pixel Accents**:
+ของตกแต่งสไตล์พิกเซลเรโทร (ดาว ✦, บล็อก ▪, ประกายแสง) ที่จัดวางเป็นฉากหลังอย่างมีชั้นเชิงรอบ Hero และ Card ไม่บดบังเนื้อหา และลดทอนอัตโนมัติบนหน้าจอมือถือเพื่อป้องกันการเลื่อนล้นขอบจอ
+

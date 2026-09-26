@@ -287,13 +287,14 @@ export default function UrlInput({ onPhaseChange }) {
           </p>
         )}
         <div className="analyze-actions">
-          <button className="pixel-btn pixel-btn--full" type="submit" disabled={busy}>
-            <Search size={14} strokeWidth={2.5} />
+          <button className="pixel-btn pixel-btn--full analyze-btn" type="submit" disabled={busy}>
+            <span className="btn-star pixel-star-twinkle" aria-hidden="true">✦</span>
             {phase === 'analyzing'
-              ? 'Analyzing...'
+              ? 'ANALYZING...'
               : phase === 'preparing' || phase === 'downloading' || phase === 'processing'
-              ? 'Downloading...'
-              : 'Analyze'}
+              ? 'DOWNLOADING...'
+              : 'ANALYZE'}
+            <span className="btn-star pixel-star-twinkle" aria-hidden="true">✦</span>
           </button>
           {(url || phase !== 'idle') && <button className="clear-btn" type="button" onClick={reset}>Clear</button>}
         </div>

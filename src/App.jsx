@@ -11,12 +11,14 @@ function App() {
       const stored = localStorage.getItem('mediadrop-theme')
       if (stored) return stored
     } catch (_) {}
-    return window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? 'dark'
-      : 'light'
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    }
+    return 'dark'
   })
 
   useEffect(() => {
+    if (typeof document === 'undefined') return
     const root = document.documentElement
     if (theme === 'dark') {
       root.classList.add('dark')
@@ -33,9 +35,6 @@ function App() {
 
   return (
     <>
-      {/* CRT scanline overlay */}
-      <div className="scanline-overlay" aria-hidden="true" />
-
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         <Header theme={theme} onToggle={toggleTheme} />
 

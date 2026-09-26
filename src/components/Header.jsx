@@ -14,12 +14,12 @@ export default function Header({ theme, onToggle }) {
         style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
       >
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }} aria-label="MediaDrop">
           <div
             style={{
               border: '2px solid var(--border)',
               boxShadow: '2px 2px 0 var(--shadow)',
-              backgroundColor: 'var(--accent)',
+              backgroundColor: 'var(--accent-purple)',
               padding: '0.35rem',
               display: 'flex',
               alignItems: 'center',
@@ -30,15 +30,15 @@ export default function Header({ theme, onToggle }) {
           </div>
           <span
             style={{
-              fontFamily: '"Press Start 2P", monospace',
+              fontFamily: 'var(--font-pixel)',
               fontSize: '0.75rem',
-              color: 'var(--accent)',
+              color: 'var(--text)',
               letterSpacing: '-0.02em',
               lineHeight: 1,
             }}
             className="logo-text"
           >
-            MediaDrop
+            Media<span style={{ color: 'var(--accent-pink)' }}>Drop</span>
           </span>
         </div>
 
@@ -50,8 +50,8 @@ export default function Header({ theme, onToggle }) {
           style={{
             border: '2px solid var(--border)',
             boxShadow: '2px 2px 0 var(--shadow)',
-            backgroundColor: 'var(--surface)',
-            color: 'var(--accent)',
+            backgroundColor: 'var(--card-bg)',
+            color: theme === 'dark' ? 'var(--accent-yellow)' : 'var(--accent-purple)',
             padding: '0.4rem 0.6rem',
             cursor: 'pointer',
             display: 'flex',
