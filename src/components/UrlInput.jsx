@@ -30,9 +30,10 @@ export function getPlatformName(urlStr, mediaType) {
   return (mediaType || 'MEDIA').toUpperCase()
 }
 
-const errors = {
+export const errors = {
   invalid: ['INVALID LINK', 'Please enter a valid HTTP or HTTPS URL.'],
   unsupported: ['UNSUPPORTED MEDIA', 'This link is currently not supported.'],
+  login_required: ['INSTAGRAM LOGIN REQUIRED', 'This post cannot be accessed anonymously.'],
   too_large: ['FILE TOO LARGE', 'The file exceeds the maximum 500 MB limit.'],
   general: ['SOMETHING WENT WRONG', 'Please try again.'],
 }
@@ -146,7 +147,12 @@ export default function UrlInput({ onPhaseChange }) {
       setPhase('result')
     } catch (error) {
       if (pending.current !== operation) return
-      setErrorKind(error.code === 'invalid_url' ? 'invalid' : error.code === 'unsupported_media' ? 'unsupported' : 'general')
+      setErrorKind(
+        error.code === 'invalid_url' ? 'invalid' :
+        error.code === 'login_required' ? 'login_required' :
+        error.code === 'unsupported_media' ? 'unsupported' :
+        'general'
+      )
       setPhase('error')
     } finally {
       clearTimeout(timeout)
@@ -173,13 +179,15 @@ export default function UrlInput({ onPhaseChange }) {
     pending.current = operation
 
     try {
-      const isImageOrThumb = format === 'IMAGE' || format === 'THUMBNAIL'
+      const effectiveFormat = options.format || format
+      const effectiveQuality = options.quality || quality
+      const isImageOrThumb = effectiveFormat === 'IMAGE' || effectiveFormat === 'THUMBNAIL'
       const outputFormat = (
         options.output_format ||
-        (isImageOrThumb ? (quality || 'Original').toLowerCase() : 'original')
+        (isImageOrThumb ? (effectiveQuality || 'Original').toLowerCase() : 'original')
       ).toLowerCase()
 
-      const downloadInit = await startDownloadJob(url.trim(), format, quality, {
+      const downloadInit = await startDownloadJob(url.trim(), effectiveFormat, effectiveQuality, {
         output_format: outputFormat,
         image_index: options.image_index ?? 0,
         download_all: options.download_all ?? false,

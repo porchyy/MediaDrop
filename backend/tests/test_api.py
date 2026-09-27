@@ -289,5 +289,127 @@ class DownloadApiTest(unittest.TestCase):
         self.assertEqual(r.json()["code"], "invalid_format")
 
 
+class InstagramApiTest(unittest.TestCase):
+    def test_analyze_instagram_single_photo(self):
+        from app.gallery_extractor import GalleryItem, GalleryResult
+
+        fake_res = GalleryResult(
+            platform="instagram",
+            post_id="C_12345",
+            title="Sunny Day",
+            items=[GalleryItem(index=0, type="image", url="https://example.com/sun.jpg", width=1080, height=1080)],
+        )
+        with patch("app.main.is_safe_host", return_value=True), \
+             patch("app.gallery_extractor.InstagramAdapter.extract", new_callable=AsyncMock) as mock_extract:
+            mock_extract.return_value = fake_res
+            r = api("POST", "/api/analyze", {"url": "https://www.instagram.com/p/C_12345/?igsh=XYZ"})
+
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertEqual(data["platform"], "instagram")
+        self.assertEqual(data["media_type"], "image")
+        self.assertEqual(data["image_count"], 1)
+        self.assertEqual(data["title"], "Sunny Day")
+        self.assertEqual(data["thumbnail"], "https://example.com/sun.jpg")
+        self.assertEqual(data["available_formats"], ["image"])
+
+    def test_analyze_instagram_carousel(self):
+        from app.gallery_extractor import GalleryItem, GalleryResult
+
+        fake_res = GalleryResult(
+            platform="instagram",
+            post_id="C_carousel",
+            title="Vacation",
+            items=[
+                GalleryItem(index=0, type="image", url="https://example.com/1.jpg"),
+                GalleryItem(index=1, type="image", url="https://example.com/2.jpg"),
+            ],
+        )
+        with patch("app.main.is_safe_host", return_value=True), \
+             patch("app.gallery_extractor.InstagramAdapter.extract", new_callable=AsyncMock) as mock_extract:
+            mock_extract.return_value = fake_res
+            r = api("POST", "/api/analyze", {"url": "https://www.instagram.com/p/C_carousel/"})
+
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertEqual(data["platform"], "instagram")
+        self.assertEqual(data["media_type"], "gallery")
+        self.assertEqual(data["image_count"], 2)
+
+    def test_analyze_instagram_video_fallback(self):
+        from app.gallery_extractor import GalleryItem, GalleryResult
+
+        fake_res = GalleryResult(
+            platform="instagram",
+            post_id="C_video_post",
+            title="Cool Reel on Feed",
+            items=[
+                GalleryItem(index=0, type="video", url="https://example.com/video.mp4"),
+            ],
+        )
+        with patch("app.main.is_safe_host", return_value=True), \
+             patch("app.gallery_extractor.InstagramAdapter.extract", new_callable=AsyncMock) as mock_extract, \
+             patch("app.main._analyze_platform") as mock_platform:
+            mock_extract.return_value = fake_res
+            mock_platform.return_value = {
+                "title": "Cool Reel on Feed",
+                "media_type": "video",
+                "thumbnail": "https://example.com/thumb.jpg",
+                "duration": 30,
+                "source": "platform",
+                "available_formats": ["video", "audio"],
+            }
+            r = api("POST", "/api/analyze", {"url": "https://www.instagram.com/p/C_video_post/"})
+
+        self.assertEqual(r.status_code, 200)
+        mock_platform.assert_called_once()
+        data = r.json()
+        self.assertEqual(data["media_type"], "video")
+
+    def test_analyze_instagram_login_required_error(self):
+        with patch("app.main.is_safe_host", return_value=True), \
+             patch("app.gallery_extractor.InstagramAdapter.extract", new_callable=AsyncMock) as mock_extract:
+            mock_extract.side_effect = RuntimeError("login_required: Instagram login wall encountered")
+            r = api("POST", "/api/analyze", {"url": "https://www.instagram.com/p/C_private/"})
+
+        self.assertEqual(r.status_code, 422)
+        data = r.json()
+        self.assertEqual(data["code"], "login_required")
+        self.assertEqual(data["message"], "This post cannot be accessed anonymously.")
+
+    def test_analyze_instagram_login_required_error_typed_exception(self):
+        from app.gallery_extractor import LoginRequiredError
+        with patch("app.main.is_safe_host", return_value=True), \
+             patch("app.gallery_extractor.InstagramAdapter.extract", new_callable=AsyncMock) as mock_extract:
+            mock_extract.side_effect = LoginRequiredError("Private post cannot be accessed")
+            r = api("POST", "/api/analyze", {"url": "https://www.instagram.com/p/C_private_typed/"})
+
+        self.assertEqual(r.status_code, 422)
+        data = r.json()
+        self.assertEqual(data["code"], "login_required")
+        self.assertEqual(data["message"], "This post cannot be accessed anonymously.")
+
+    def test_analyze_instagram_url_sanitizes_tracking_params(self):
+        from app.gallery_extractor import GalleryItem, GalleryResult
+
+        fake_res = GalleryResult(
+            platform="instagram",
+            post_id="C_clean",
+            title="Clean Post",
+            items=[
+                GalleryItem(index=0, type="image", url="https://example.com/clean.jpg"),
+            ],
+        )
+        with patch("app.main.is_safe_host", return_value=True), \
+             patch("app.gallery_extractor.InstagramAdapter.extract", new_callable=AsyncMock) as mock_extract:
+            mock_extract.return_value = fake_res
+            r = api("POST", "/api/analyze", {"url": "https://www.instagram.com/p/C_clean/?igsh=12345&utm_source=ig_web_copy_link"})
+
+        self.assertEqual(r.status_code, 200)
+        # Verify the adapter extract received the sanitized URL
+        mock_extract.assert_called_once_with("https://www.instagram.com/p/C_clean/", timeout=unittest.mock.ANY)
+
+
 if __name__ == "__main__":
     unittest.main()
+

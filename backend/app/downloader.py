@@ -8,7 +8,7 @@ from urllib.parse import unquote, urljoin, urlsplit
 import httpx
 import yt_dlp
 
-from app.gallery_extractor import extract_tiktok_photos, is_tiktok_photo_url
+from app.gallery_extractor import extract_tiktok_photos, is_tiktok_photo_url, gallery_extractor
 from app.image_processor import convert_image
 from app.jobs import Job, JobManager
 from app.security import is_safe_url
@@ -274,30 +274,63 @@ def _cleanup_dir(job_dir: Path) -> None:
 
 
 async def download_single_gallery_photo(job: Job, manager: JobManager) -> None:
-    """Download a single selected photo from a TikTok photo post."""
+    """Download a single selected photo or video from a gallery/carousel post."""
     if manager.is_cancelled(job.job_id):
         return
     manager.update_job(job.job_id, status="downloading", progress=0.0)
+    platform_prefix = "gallery"
     try:
-        title, images = await extract_tiktok_photos(job.url, timeout=15.0)
+        if is_tiktok_photo_url(job.url):
+            title, images = await extract_tiktok_photos(job.url, timeout=15.0)
+            items = images
+            match = re.search(r'/photo/(\d+)', job.url)
+            post_id = match.group(1) if match else job.job_id
+            platform_prefix = f"tiktok_{post_id}"
+        else:
+            adapter = gallery_extractor.get_adapter(job.url)
+            if adapter:
+                res = await adapter.extract(job.url, timeout=15.0)
+                # If post is exclusively video (0 images, 1+ videos) and job is video/audio, fall back to yt-dlp
+                if res.image_count == 0 and res.video_count > 0 and job.format.lower() in ("video", "audio"):
+                    loop = asyncio.get_running_loop()
+                    await loop.run_in_executor(None, _run_platform_download_sync, job, manager)
+                    return
+                items = res.items_dict
+                platform_prefix = f"{res.platform}_{res.post_id}"
+            else:
+                raise ValueError("Unsupported gallery URL")
     except Exception as exc:
         if not manager.is_cancelled(job.job_id):
             manager.update_job(job.job_id, status="failed", error=f"Photo extraction failed: {exc}", error_code="download_failed")
         return
 
-    if not images:
+    if not items:
         if not manager.is_cancelled(job.job_id):
             manager.update_job(job.job_id, status="failed", error="No images found in gallery", error_code="download_failed")
         return
 
-    idx = job.image_index if 0 <= job.image_index < len(images) else 0
-    target_url = images[idx]["url"]
+    idx = job.image_index if 0 <= job.image_index < len(items) else 0
+    selected_item = items[idx]
+    target_url = selected_item["url"]
     original_url = job.url
+    original_output_format = job.output_format
     job.url = target_url
+    if selected_item.get("type") == "video":
+        job.output_format = "original"
     try:
         await download_direct_file(job, manager)
+        if selected_item.get("type") == "video":
+            updated_job = manager.get_job(job.job_id)
+            if updated_job and updated_job.status == "ready" and updated_job.file_path:
+                old_path = Path(updated_job.file_path)
+                clean_name = f"{platform_prefix}_video_{idx + 1}.mp4"
+                new_path = old_path.parent / clean_name
+                if old_path.exists() and old_path != new_path:
+                    old_path.rename(new_path)
+                    manager.update_job(job.job_id, filename=clean_name, file_path=str(new_path))
     finally:
         job.url = original_url
+        job.output_format = original_output_format
 
 
 async def download_gallery_bundle(job: Job, manager: JobManager) -> None:
@@ -309,7 +342,20 @@ async def download_gallery_bundle(job: Job, manager: JobManager) -> None:
     manager.update_job(job.job_id, status="downloading", progress=0.0)
 
     try:
-        title, images = await extract_tiktok_photos(job.url, timeout=15.0)
+        if is_tiktok_photo_url(job.url):
+            title, images = await extract_tiktok_photos(job.url, timeout=15.0)
+            match = re.search(r'/photo/(\d+)', job.url)
+            post_id = match.group(1) if match else job.job_id
+            platform_prefix = post_id
+        else:
+            adapter = gallery_extractor.get_adapter(job.url)
+            if adapter:
+                res = await adapter.extract(job.url, timeout=15.0)
+                images = [it.to_dict() for it in res.items if it.type == "image"]
+                post_id = res.post_id
+                platform_prefix = f"{res.platform}_{post_id}"
+            else:
+                raise ValueError("Unsupported gallery URL")
     except Exception as exc:
         manager.update_job(job.job_id, status="failed", error=f"Gallery extraction failed: {exc}", error_code="download_failed")
         return
@@ -317,9 +363,6 @@ async def download_gallery_bundle(job: Job, manager: JobManager) -> None:
     if not images:
         manager.update_job(job.job_id, status="failed", error="No images found in gallery", error_code="download_failed")
         return
-
-    match = re.search(r'/photo/(\d+)', job.url)
-    post_id = match.group(1) if match else job.job_id
 
     fmt_lower = job.output_format.lower()
     ext = "jpg" if fmt_lower in ("jpg", "jpeg") else "png" if fmt_lower == "png" else "original"
@@ -376,7 +419,7 @@ async def download_gallery_bundle(job: Job, manager: JobManager) -> None:
 
         # Create ZIP archive (80% - 100%)
         archive_suffix = ext if ext != "original" else "photos"
-        zip_name = f"{post_id}_photos_{archive_suffix}.zip"
+        zip_name = f"{platform_prefix}_photos_{archive_suffix}.zip"
         zip_path = job_dir / zip_name
 
         with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zip_file:
@@ -421,11 +464,12 @@ async def run_job(job_id: str, manager: JobManager, is_direct: bool) -> None:
 
         async def _execute():
             loop = asyncio.get_running_loop()
-            if is_tiktok_photo_url(job.url):
-                if job.download_all:
-                    await download_gallery_bundle(job, manager)
-                else:
-                    await download_single_gallery_photo(job, manager)
+            if job.download_all:
+                await download_gallery_bundle(job, manager)
+            elif job.format.lower() == "audio":
+                await loop.run_in_executor(None, _run_platform_download_sync, job, manager)
+            elif gallery_extractor.can_handle(job.url) or is_tiktok_photo_url(job.url):
+                await download_single_gallery_photo(job, manager)
             elif job.format.lower() == "thumbnail" and not is_direct:
                 # Extract real thumbnail image URL from platform video
                 manager.update_job(job.job_id, status="downloading", progress=0.0)

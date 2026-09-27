@@ -79,3 +79,63 @@ def test_parse_gallery_dl_json_empty():
     title, images = parse_gallery_dl_json("")
     assert title == ""
     assert images == []
+
+
+def test_gallery_item_and_result():
+    from app.gallery_extractor import GalleryItem, GalleryResult
+
+    items = [
+        GalleryItem(index=0, type="image", url="https://example.com/1.jpg", width=1080, height=1920),
+        GalleryItem(index=1, type="video", url="https://example.com/2.mp4", width=720, height=1280),
+        GalleryItem(index=2, type="image", url="https://example.com/3.jpg", width=1080, height=1920),
+    ]
+    res = GalleryResult(platform="test", post_id="123", title="Test Gallery", items=items)
+    assert res.image_count == 2
+    assert res.video_count == 1
+    assert len(res.images) == 2
+    assert res.images[0]["url"] == "https://example.com/1.jpg"
+    assert res.images[1]["url"] == "https://example.com/3.jpg"
+    assert len(res.items_dict) == 3
+
+
+def test_tiktok_adapter_post_id():
+    from app.gallery_extractor import TikTokAdapter
+
+    adapter = TikTokAdapter()
+    assert adapter.can_handle("https://www.tiktok.com/@user/photo/789101112") is True
+    assert adapter.can_handle("https://example.com/p/123") is False
+    assert adapter.get_post_id("https://www.tiktok.com/@user/photo/789101112") == "789101112"
+
+
+def test_gallery_extractor_registry():
+    from app.gallery_extractor import GalleryExtractor, TikTokAdapter
+
+    extractor = GalleryExtractor()
+    adapter = TikTokAdapter()
+    extractor.register(adapter)
+
+    assert extractor.can_handle("https://www.tiktok.com/@user/photo/12345") is True
+    assert extractor.can_handle("https://youtube.com/watch?v=123") is False
+    assert extractor.get_adapter("https://www.tiktok.com/@user/photo/12345") is adapter
+
+
+def test_instagram_adapter_url_handling():
+    from app.gallery_extractor import InstagramAdapter
+
+    adapter = InstagramAdapter()
+    # /p/ links supported
+    assert adapter.can_handle("https://www.instagram.com/p/C_abc123/") is True
+    assert adapter.can_handle("https://instagram.com/p/C_abc123") is True
+    assert adapter.can_handle("http://www.instagram.com/p/C_abc123/?utm_source=ig_web_copy_link&igsh=XYZ123") is True
+
+    # /reel/, /reels/, /tv/, and other platforms excluded
+    assert adapter.can_handle("https://www.instagram.com/reel/C_abc123/") is False
+    assert adapter.can_handle("https://www.instagram.com/reels/C_abc123/") is False
+    assert adapter.can_handle("https://www.instagram.com/tv/C_abc123/") is False
+    assert adapter.can_handle("https://tiktok.com/@user/photo/123") is False
+
+    # Shortcode and sanitization
+    assert adapter.get_post_id("https://www.instagram.com/p/C_abc123/?igsh=XYZ") == "C_abc123"
+    assert adapter.sanitize_url("https://www.instagram.com/p/C_abc123/?igsh=XYZ") == "https://www.instagram.com/p/C_abc123/"
+
+

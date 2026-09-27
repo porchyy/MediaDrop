@@ -40,22 +40,26 @@ export default function ResultCard({
 
   const [imageIndex, setImageIndex] = useState(0)
   const isGallery = media.media_type === 'gallery'
-  const images = media.images || []
-  const totalImages = media.image_count || images.length || 1
-  const currentImage = images[imageIndex] || { url: media.thumbnail }
+  const items = media.items || media.images || []
+  const totalItems = media.image_count || items.length || 1
+  const currentItem = items[imageIndex] || { url: media.thumbnail, type: 'image' }
+  const isCurrentVideo = isGallery && currentItem?.type === 'video'
+  const photosCount = items.filter(it => it.type === 'image' || !it.type).length || (isGallery ? totalItems : 1)
+  const videosCount = items.filter(it => it.type === 'video').length
+  const isMixed = photosCount > 0 && videosCount > 0
 
   useEffect(() => {
-    if (!isGallery || totalImages <= 1) return
+    if (!isGallery || totalItems <= 1) return
     const handleKeyDown = e => {
       if (e.key === 'ArrowLeft') {
-        setImageIndex(i => (i > 0 ? i - 1 : totalImages - 1))
+        setImageIndex(i => (i > 0 ? i - 1 : totalItems - 1))
       } else if (e.key === 'ArrowRight') {
-        setImageIndex(i => (i < totalImages - 1 ? i + 1 : 0))
+        setImageIndex(i => (i < totalItems - 1 ? i + 1 : 0))
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isGallery, totalImages])
+  }, [isGallery, totalItems])
 
   const isWorking = phase === 'preparing' || phase === 'downloading' || phase === 'processing'
   const stateTitle =
@@ -69,7 +73,7 @@ export default function ResultCard({
 
   const progressPercent = job?.progress
   const downloadedMb = job?.downloaded_bytes ? formatBytes(job.downloaded_bytes) : null
-  const displayPlatform = platform || (media.media_type ?? media.type ?? 'MEDIA').toUpperCase()
+  const displayPlatform = (media.platform || platform || (media.media_type ?? media.type ?? 'MEDIA')).toUpperCase()
   const themeKey = FORMAT_DEFS[format]?.theme || 'video'
 
   return (
@@ -89,19 +93,47 @@ export default function ResultCard({
         <div
           className={`result-thumbnail-hero${isGallery ? ' gallery-hero' : ''}`}
           role="img"
-          aria-label={isGallery ? `Photo ${imageIndex + 1} of ${totalImages}` : 'Media cover image'}
+          aria-label={isGallery ? `Photo ${imageIndex + 1} of ${totalItems}` : 'Media cover image'}
+          style={{ position: 'relative' }}
         >
-          {isGallery && currentImage?.url ? (
-            <img
-              src={currentImage.url}
-              alt=""
-              className="result-hero-img"
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
-              }}
-            />
+          {isGallery && currentItem?.url ? (
+            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+              <img
+                src={currentItem.url}
+                alt=""
+                className="result-hero-img"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                }}
+              />
+              {isCurrentVideo && (
+                <div
+                  className="video-badge-overlay"
+                  style={{
+                    position: 'absolute',
+                    top: '0.75rem',
+                    right: '0.75rem',
+                    background: 'rgba(0, 0, 0, 0.85)',
+                    border: '2px solid var(--accent-purple, #b185db)',
+                    color: '#fff',
+                    fontSize: '0.75rem',
+                    fontWeight: 'bold',
+                    padding: '0.2rem 0.5rem',
+                    fontFamily: 'monospace',
+                    letterSpacing: '1px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    zIndex: 2,
+                  }}
+                >
+                  <Video size={14} aria-hidden="true" />
+                  <span>VIDEO</span>
+                </div>
+              )}
+            </div>
           ) : media.thumbnail ? (
             <img
               src={media.thumbnail}
@@ -126,24 +158,24 @@ export default function ResultCard({
         </div>
 
         {/* Gallery Carousel Navigation Dock */}
-        {isGallery && totalImages > 1 && (
+        {isGallery && totalItems > 1 && (
           <div className="carousel-dock" aria-label="Photo gallery navigation">
             <button
               type="button"
               className="pixel-btn carousel-nav-btn"
               aria-label="Previous image"
-              onClick={() => setImageIndex(i => (i > 0 ? i - 1 : totalImages - 1))}
+              onClick={() => setImageIndex(i => (i > 0 ? i - 1 : totalItems - 1))}
             >
               &lt;
             </button>
             <span className="carousel-counter" aria-live="polite">
-              {imageIndex + 1} / {totalImages}
+              {imageIndex + 1} / {totalItems}
             </span>
             <button
               type="button"
               className="pixel-btn carousel-nav-btn"
               aria-label="Next image"
-              onClick={() => setImageIndex(i => (i < totalImages - 1 ? i + 1 : 0))}
+              onClick={() => setImageIndex(i => (i < totalItems - 1 ? i + 1 : 0))}
             >
               &gt;
             </button>
@@ -155,7 +187,15 @@ export default function ResultCard({
           <h2 className="result-title">{media.title}</h2>
           <div className="result-meta-bar">
             <p className="result-meta">
-              {displayPlatform} • {isGallery ? `${totalImages} ${totalImages === 1 ? 'IMAGE' : 'IMAGES'}` : mediaDuration(media.duration)}
+              {displayPlatform} • {
+                displayPlatform === 'INSTAGRAM'
+                  ? (totalItems === 1 || media.media_type === 'image'
+                      ? 'PHOTO'
+                      : `CAROUSEL • ${totalItems} ${isMixed ? 'ITEMS' : 'PHOTOS'}`)
+                  : (isGallery
+                      ? `${totalItems} ${totalItems === 1 ? 'IMAGE' : 'IMAGES'}`
+                      : mediaDuration(media.duration))
+              }
             </p>
             <span className="detected-badge" aria-label="Media detected">
               <span className="detected-dot" aria-hidden="true">●</span> DETECTED
@@ -183,60 +223,91 @@ export default function ResultCard({
               </div>
             </fieldset>
 
-            <fieldset className="result-fieldset">
-              <legend>{FORMAT_DEFS[format]?.heading || 'QUALITY'}</legend>
-              <div className="result-options">
-                {FORMAT_DEFS[format]?.choices.map(choice => {
-                  const isBest = choice.toLowerCase() === 'best'
-                  const isOriginal = choice.toLowerCase() === 'original'
-                  const isStarChoice = isBest || isOriginal
-                  return (
-                    <button
-                      key={choice}
-                      className={`result-option ${isStarChoice ? 'result-option--best' : ''}${quality === choice ? ' result-option--active' : ''}`}
-                      type="button"
-                      aria-label={isBest ? 'Best quality (Recommended)' : isOriginal ? 'Original (Recommended)' : choice}
-                      aria-pressed={quality === choice}
-                      onClick={() => onQualityChange(choice)}
-                    >
-                      {isBest && <span aria-hidden="true">★ </span>}
-                      {choice}
-                      {isOriginal && <span aria-hidden="true"> ★</span>}
-                    </button>
-                  )
-                })}
-              </div>
-            </fieldset>
+            {!isCurrentVideo && (
+              <fieldset className="result-fieldset">
+                <legend>{FORMAT_DEFS[format]?.heading || 'QUALITY'}</legend>
+                <div className="result-options">
+                  {FORMAT_DEFS[format]?.choices.map(choice => {
+                    const isBest = choice.toLowerCase() === 'best'
+                    const isOriginal = choice.toLowerCase() === 'original'
+                    const isStarChoice = isBest || isOriginal
+                    return (
+                      <button
+                        key={choice}
+                        className={`result-option ${isStarChoice ? 'result-option--best' : ''}${quality === choice ? ' result-option--active' : ''}`}
+                        type="button"
+                        aria-label={isBest ? 'Best quality (Recommended)' : isOriginal ? 'Original (Recommended)' : choice}
+                        aria-pressed={quality === choice}
+                        onClick={() => onQualityChange(choice)}
+                      >
+                        {isBest && <span aria-hidden="true">★ </span>}
+                        {choice}
+                        {isOriginal && <span aria-hidden="true"> ★</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+              </fieldset>
+            )}
 
             {isGallery ? (
-              totalImages > 1 ? (
+              totalItems > 1 ? (
                 <div className="gallery-actions" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
+                  {isCurrentVideo ? (
+                    <button
+                      className="pixel-btn pixel-btn--full download-cta download-cta--video"
+                      type="button"
+                      onClick={() => onDownload?.({ format: 'video', quality: 'Best', output_format: 'original', image_index: imageIndex, download_all: false })}
+                    >
+                      <Video size={18} aria-hidden="true" />
+                      DOWNLOAD VIDEO
+                    </button>
+                  ) : (
+                    <button
+                      className={`pixel-btn pixel-btn--full download-cta download-cta--${themeKey}`}
+                      type="button"
+                      onClick={() => onDownload?.({ output_format: quality.toLowerCase(), image_index: imageIndex, download_all: false })}
+                    >
+                      <Download size={18} aria-hidden="true" />
+                      CURRENT IMAGE
+                    </button>
+                  )}
+                  {photosCount > 1 && (
+                    <button
+                      className="pixel-btn pixel-btn--full download-cta download-cta--zip"
+                      type="button"
+                      onClick={() => onDownload?.({ output_format: quality.toLowerCase(), download_all: true })}
+                    >
+                      <Download size={18} aria-hidden="true" />
+                      {isMixed ? `ALL IMAGES (${photosCount} PHOTOS .ZIP)` : 'ALL IMAGES (.ZIP)'}
+                    </button>
+                  )}
+                  {isMixed && photosCount > 1 && (
+                    <p className="mixed-media-note" style={{ fontSize: '0.8rem', color: 'var(--muted)', textAlign: 'center', marginTop: '-0.25rem' }}>
+                      ℹ Contains {photosCount} photos ({videosCount} {videosCount === 1 ? 'video' : 'videos'} excluded from ZIP)
+                    </p>
+                  )}
+                </div>
+              ) : (
+                isCurrentVideo ? (
+                  <button
+                    className="pixel-btn pixel-btn--full download-cta download-cta--video"
+                    type="button"
+                    onClick={() => onDownload?.({ format: 'video', quality: 'Best', output_format: 'original', image_index: 0, download_all: false })}
+                  >
+                    <Video size={18} aria-hidden="true" />
+                    DOWNLOAD VIDEO
+                  </button>
+                ) : (
                   <button
                     className={`pixel-btn pixel-btn--full download-cta download-cta--${themeKey}`}
                     type="button"
-                    onClick={() => onDownload?.({ output_format: quality.toLowerCase(), image_index: imageIndex, download_all: false })}
+                    onClick={() => onDownload?.({ output_format: quality.toLowerCase(), image_index: 0, download_all: false })}
                   >
                     <Download size={18} aria-hidden="true" />
-                    CURRENT IMAGE
+                    DOWNLOAD IMAGE
                   </button>
-                  <button
-                    className="pixel-btn pixel-btn--full download-cta download-cta--zip"
-                    type="button"
-                    onClick={() => onDownload?.({ output_format: quality.toLowerCase(), download_all: true })}
-                  >
-                    <Download size={18} aria-hidden="true" />
-                    ALL IMAGES (.ZIP)
-                  </button>
-                </div>
-              ) : (
-                <button
-                  className={`pixel-btn pixel-btn--full download-cta download-cta--${themeKey}`}
-                  type="button"
-                  onClick={() => onDownload?.({ output_format: quality.toLowerCase(), image_index: 0, download_all: false })}
-                >
-                  <Download size={18} aria-hidden="true" />
-                  DOWNLOAD IMAGE
-                </button>
+                )
               )
             ) : (
               <button

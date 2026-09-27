@@ -13,7 +13,13 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
-from app.gallery_extractor import extract_tiktok_photos, is_tiktok_photo_url
+from app.gallery_extractor import (
+    extract_tiktok_photos,
+    is_tiktok_photo_url,
+    gallery_extractor,
+    LoginRequiredError,
+    sanitize_instagram_url,
+)
 from app.downloader import run_job
 from app.jobs import job_manager
 from app.security import is_safe_host, is_safe_url, validate_url_syntax
@@ -50,6 +56,8 @@ class MediaInfo(BaseModel):
     available_formats: list[str]
     image_count: int | None = None
     images: list[dict[str, Any]] | None = None
+    platform: str | None = None
+    items: list[dict[str, Any]] | None = None
 
 
 class AnalyzeRequest(BaseModel):
@@ -191,6 +199,7 @@ def health():
 @app.post("/api/analyze")
 async def analyze(body: AnalyzeRequest):
     url = (body.url or "").strip()
+    url = sanitize_instagram_url(url)
 
     valid, hostname = validate_url_syntax(url)
     if not valid or not hostname or not is_safe_host(hostname):
@@ -199,24 +208,75 @@ async def analyze(body: AnalyzeRequest):
             status_code=400,
         )
 
-    if is_tiktok_photo_url(url):
-        try:
-            title, images = await extract_tiktok_photos(url, timeout=YTDLP_TIMEOUT)
-            return MediaInfo(
-                title=title,
-                media_type="gallery",
-                thumbnail=images[0]["url"] if images else None,
-                duration=None,
-                source="platform",
-                available_formats=["image"],
-                image_count=len(images),
-                images=images,
-            )
-        except Exception:
-            return JSONResponse(
-                {"code": "unsupported_media", "message": "This link is currently not supported."},
-                status_code=422,
-            )
+    adapter = gallery_extractor.get_adapter(url)
+    if adapter:
+        if adapter.platform == "tiktok":
+            try:
+                title, images = await extract_tiktok_photos(url, timeout=YTDLP_TIMEOUT)
+                return MediaInfo(
+                    title=title,
+                    media_type="gallery",
+                    thumbnail=images[0]["url"] if images else None,
+                    duration=None,
+                    source="platform",
+                    available_formats=["image"],
+                    image_count=len(images),
+                    images=images,
+                    platform="tiktok",
+                    items=images,
+                )
+            except Exception:
+                return JSONResponse(
+                    {"code": "unsupported_media", "message": "This link is currently not supported."},
+                    status_code=422,
+                )
+        else:
+            try:
+                gallery_res = await adapter.extract(url, timeout=YTDLP_TIMEOUT)
+                if gallery_res.image_count == 0 and gallery_res.video_count > 0:
+                    return _analyze_platform(url)
+
+                if gallery_res.image_count == 1 and gallery_res.video_count == 0:
+                    media_type = "image"
+                else:
+                    media_type = "gallery"
+
+                items_dicts = gallery_res.items_dict
+                images_dicts = gallery_res.images
+                first_thumb = items_dicts[0]["url"] if items_dicts else None
+
+                return MediaInfo(
+                    title=gallery_res.title,
+                    media_type=media_type,
+                    thumbnail=first_thumb,
+                    duration=None,
+                    source="platform",
+                    available_formats=["image"],
+                    image_count=gallery_res.image_count,
+                    platform=gallery_res.platform,
+                    items=items_dicts,
+                    images=images_dicts,
+                )
+            except LoginRequiredError:
+                return JSONResponse(
+                    {"code": "login_required", "message": "This post cannot be accessed anonymously."},
+                    status_code=422,
+                )
+            except RuntimeError as exc:
+                if "login_required" in str(exc).lower():
+                    return JSONResponse(
+                        {"code": "login_required", "message": "This post cannot be accessed anonymously."},
+                        status_code=422,
+                    )
+                return JSONResponse(
+                    {"code": "unsupported_media", "message": "This link is currently not supported."},
+                    status_code=422,
+                )
+            except Exception:
+                return JSONResponse(
+                    {"code": "unsupported_media", "message": "This link is currently not supported."},
+                    status_code=422,
+                )
 
     is_direct, media_type, head_returned_html = _probe_direct_media(url)
     if is_direct and media_type is not None:

@@ -584,6 +584,114 @@ test('ResultCard renders single-image gallery without carousel controls or ZIP b
   }
 })
 
+test('ResultCard renders Instagram single photo with INSTAGRAM • PHOTO and DOWNLOAD IMAGE', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { ResultCard } = await loadModules(server)
+    const media = {
+      title: 'Instagram Photo',
+      platform: 'instagram',
+      media_type: 'image',
+      image_count: 1,
+      items: [{ index: 0, type: 'image', url: 'https://example.com/ig-photo.jpg' }],
+      available_formats: ['image'],
+    }
+
+    const html = renderToStaticMarkup(createElement(ResultCard, { phase: 'result', format: 'IMAGE', quality: 'Original', media, platform: 'Instagram' }))
+    assert.match(html, /INSTAGRAM • PHOTO/)
+    assert.doesNotMatch(html, /carousel-dock/)
+    assert.doesNotMatch(html, /ALL IMAGES \(\.ZIP\)/)
+    assert.match(html, /DOWNLOAD IMAGE/)
+    assert.match(html, /Original.*★/)
+    assert.match(html, /JPG/)
+    assert.match(html, /PNG/)
+  } finally {
+    await server.close()
+  }
+})
+
+test('ResultCard renders Instagram mixed carousel with [ VIDEO ] badge and dynamic CTA buttons', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { ResultCard } = await loadModules(server)
+    const media = {
+      title: 'Instagram Mixed Album',
+      platform: 'instagram',
+      media_type: 'gallery',
+      image_count: 2,
+      items: [
+        { index: 0, type: 'image', url: 'https://example.com/p1.jpg' },
+        { index: 1, type: 'video', url: 'https://example.com/v2.mp4' },
+      ],
+      available_formats: ['image'],
+    }
+
+    // Viewing item 0 (photo)
+    const photoHtml = renderToStaticMarkup(createElement(ResultCard, { phase: 'result', format: 'IMAGE', quality: 'Original', media, platform: 'Instagram' }))
+    assert.match(photoHtml, /INSTAGRAM • CAROUSEL • 2 ITEMS/)
+    assert.match(photoHtml, /carousel-dock/)
+    assert.match(photoHtml, /CURRENT IMAGE/)
+    assert.match(photoHtml, /ALL IMAGES \(1 PHOTOS \.ZIP\)|CURRENT IMAGE/)
+    assert.match(photoHtml, /IMAGE FORMAT/)
+
+    // If viewing item 1 (video): we pass media where first item is video to test static render of video slide
+    const videoFirstMedia = {
+      ...media,
+      items: [
+        { index: 0, type: 'video', url: 'https://example.com/v2.mp4' },
+        { index: 1, type: 'image', url: 'https://example.com/p1.jpg' },
+      ],
+    }
+    const videoHtml = renderToStaticMarkup(createElement(ResultCard, { phase: 'result', format: 'IMAGE', quality: 'Original', media: videoFirstMedia, platform: 'Instagram' }))
+    assert.match(videoHtml, /video-badge-overlay/)
+    assert.match(videoHtml, /VIDEO/)
+    assert.match(videoHtml, /DOWNLOAD VIDEO/)
+    // Image format options hidden when viewing a video item
+    assert.doesNotMatch(videoHtml, /IMAGE FORMAT/)
+  } finally {
+    await server.close()
+  }
+})
+
+test('ResultCard mixed carousel with 2+ photos shows note about excluded videos', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { ResultCard } = await loadModules(server)
+    const media = {
+      title: 'Instagram Mixed with 2 photos',
+      platform: 'instagram',
+      media_type: 'gallery',
+      image_count: 2,
+      items: [
+        { index: 0, type: 'image', url: 'https://example.com/p1.jpg' },
+        { index: 1, type: 'video', url: 'https://example.com/v2.mp4' },
+        { index: 2, type: 'image', url: 'https://example.com/p3.jpg' },
+      ],
+      available_formats: ['image'],
+    }
+
+    const html = renderToStaticMarkup(createElement(ResultCard, { phase: 'result', format: 'IMAGE', quality: 'Original', media, platform: 'Instagram' }))
+    assert.match(html, /ALL IMAGES \(2 PHOTOS \.ZIP\)/)
+    assert.match(html, /mixed-media-note/)
+    assert.match(html, /1 video excluded from ZIP/)
+  } finally {
+    await server.close()
+  }
+})
+
+test('UrlInput defines dedicated login_required error for Instagram private/auth walls', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { errors } = await server.ssrLoadModule('/src/components/UrlInput.jsx')
+    assert.ok(errors.login_required)
+    assert.equal(errors.login_required[0], 'INSTAGRAM LOGIN REQUIRED')
+    assert.equal(errors.login_required[1], 'This post cannot be accessed anonymously.')
+  } finally {
+    await server.close()
+  }
+})
+
+
 
 
 
