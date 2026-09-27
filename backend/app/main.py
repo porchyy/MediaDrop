@@ -18,6 +18,7 @@ from app.gallery_extractor import (
     is_tiktok_photo_url,
     gallery_extractor,
     LoginRequiredError,
+    ExtractorConfigurationError,
     sanitize_instagram_url,
 )
 from app.downloader import run_job
@@ -225,6 +226,11 @@ async def analyze(body: AnalyzeRequest):
                     platform="tiktok",
                     items=images,
                 )
+            except ExtractorConfigurationError:
+                return JSONResponse(
+                    {"code": "extractor_error", "message": "The media extractor is temporarily unavailable."},
+                    status_code=500,
+                )
             except Exception:
                 return JSONResponse(
                     {"code": "unsupported_media", "message": "This link is currently not supported."},
@@ -257,9 +263,19 @@ async def analyze(body: AnalyzeRequest):
                     items=items_dicts,
                     images=images_dicts,
                 )
+            except ExtractorConfigurationError:
+                return JSONResponse(
+                    {"code": "extractor_error", "message": "The media extractor is temporarily unavailable."},
+                    status_code=500,
+                )
             except LoginRequiredError:
                 return JSONResponse(
                     {"code": "login_required", "message": "This post cannot be accessed anonymously."},
+                    status_code=422,
+                )
+            except ValueError:
+                return JSONResponse(
+                    {"code": "unsupported_media", "message": "This link is currently not supported."},
                     status_code=422,
                 )
             except RuntimeError as exc:
@@ -269,8 +285,8 @@ async def analyze(body: AnalyzeRequest):
                         status_code=422,
                     )
                 return JSONResponse(
-                    {"code": "unsupported_media", "message": "This link is currently not supported."},
-                    status_code=422,
+                    {"code": "internal_error", "message": "Please try again."},
+                    status_code=500,
                 )
             except Exception:
                 return JSONResponse(

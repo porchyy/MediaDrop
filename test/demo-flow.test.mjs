@@ -691,6 +691,25 @@ test('UrlInput defines dedicated login_required error for Instagram private/auth
   }
 })
 
+test('UrlInput defines dedicated extractor_error for media extractor configuration or subprocess errors', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { errors } = await server.ssrLoadModule('/src/components/UrlInput.jsx')
+    assert.ok(errors.extractor_error)
+    assert.equal(errors.extractor_error[0], 'MEDIA EXTRACTOR ERROR')
+    assert.equal(errors.extractor_error[1], 'The media extractor is temporarily unavailable.')
+
+    // Assert DOM markup with extractor_error
+    const [title, desc] = errors.extractor_error
+    const markup = `<div id="url-error" class="error-card pixel-border" role="alert"><strong>${title}</strong><p>${desc}</p></div>`
+    assert.match(markup, /MEDIA EXTRACTOR ERROR/)
+    assert.match(markup, /The media extractor is temporarily unavailable\./)
+  } finally {
+    await server.close()
+  }
+})
+
+
 
 
 

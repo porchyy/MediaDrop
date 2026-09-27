@@ -12,6 +12,11 @@ class LoginRequiredError(Exception):
     pass
 
 
+class ExtractorConfigurationError(Exception):
+    """Raised when the underlying gallery-dl CLI configuration or options fail (e.g. unrecognized arguments)."""
+    pass
+
+
 def sanitize_instagram_url(url: str) -> str:
     """Normalize Instagram URL and strip tracking query parameters."""
     try:
@@ -74,6 +79,15 @@ class GalleryResult:
         return [it.to_dict() for it in self.items]
 
 
+def build_gallery_dl_command(url: str, user_agent: str | None = None) -> list[str]:
+    """Build minimal, highly compatible gallery-dl CLI command arguments."""
+    cmd = [sys.executable, "-m", "gallery_dl", "--dump-json"]
+    if user_agent:
+        cmd.extend(["--user-agent", user_agent])
+    cmd.append(url)
+    return cmd
+
+
 async def run_gallery_dl_subprocess(cmd: list[str], timeout: float = 15.0) -> tuple[str, str, int]:
     """Execute a gallery-dl command in an isolated subprocess."""
     try:
@@ -97,6 +111,22 @@ async def run_gallery_dl_subprocess(cmd: list[str], timeout: float = 15.0) -> tu
         stderr.decode("utf-8", errors="replace"),
         proc.returncode,
     )
+
+
+def check_gallery_dl_subprocess_error(stderr: str, returncode: int) -> None:
+    """Classify subprocess stderr into typed exceptions."""
+    if returncode == 0:
+        return
+    err_msg = stderr.strip()
+    err_lower = err_msg.lower()
+    # 1. Configuration / CLI syntax errors
+    if any(k in err_lower for k in ("unrecognized arguments", "unknown option", "error: unrecognized")) or "usage:" in err_lower:
+        raise ExtractorConfigurationError(f"extractor_error: {err_msg}")
+    # 2. Authentic login or private post restriction
+    if any(k in err_lower for k in ("login", "private", "checkpoint", "authentication", "unauthorized")) or any(c in err_msg for c in ("401", "403")):
+        raise LoginRequiredError(f"login_required: {err_msg}")
+    # 3. Generic failure
+    raise RuntimeError(f"gallery-dl failed with code {returncode}: {err_msg}")
 
 
 def parse_gallery_dl_entries(raw_text: str, default_title: str = "") -> tuple[str, list[GalleryItem]]:
@@ -209,12 +239,10 @@ class TikTokAdapter(BaseGalleryAdapter):
 
     async def extract(self, url: str, timeout: float = 15.0) -> GalleryResult:
         clean_url = self.sanitize_url(url)
-        cmd = [sys.executable, "-m", "gallery_dl", "--dump-json", clean_url]
+        cmd = build_gallery_dl_command(clean_url)
         stdout, stderr, returncode = await run_gallery_dl_subprocess(cmd, timeout=timeout)
 
-        if returncode != 0:
-            err_msg = stderr.strip()
-            raise RuntimeError(f"gallery-dl failed with code {returncode}: {err_msg}")
+        check_gallery_dl_subprocess_error(stderr, returncode)
 
         title, items = parse_gallery_dl_entries(stdout, default_title="TikTok photo post")
         photo_items = [it for it in items if it.type == "image"]
@@ -258,25 +286,11 @@ class InstagramAdapter(BaseGalleryAdapter):
 
     async def extract(self, url: str, timeout: float = 15.0) -> GalleryResult:
         clean_url = self.sanitize_url(url)
-        cmd = [
-            sys.executable,
-            "-m",
-            "gallery_dl",
-            "--dump-json",
-            "--no-color",
-            "--no-warnings",
-            "--user-agent",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            clean_url,
-        ]
+        ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        cmd = build_gallery_dl_command(clean_url, user_agent=ua)
         stdout, stderr, returncode = await run_gallery_dl_subprocess(cmd, timeout=timeout)
 
-        if returncode != 0:
-            err_msg = stderr.strip()
-            err_lower = err_msg.lower()
-            if any(k in err_lower for k in ("login", "private", "checkpoint", "authentication", "unauthorized")) or any(c in err_msg for c in ("401", "403")):
-                raise LoginRequiredError(f"login_required: {err_msg}")
-            raise RuntimeError(f"gallery-dl failed with code {returncode}: {err_msg}")
+        check_gallery_dl_subprocess_error(stderr, returncode)
 
         title, items = parse_gallery_dl_entries(stdout, default_title="Instagram post")
         if not items:

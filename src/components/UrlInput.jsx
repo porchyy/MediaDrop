@@ -34,6 +34,7 @@ export const errors = {
   invalid: ['INVALID LINK', 'Please enter a valid HTTP or HTTPS URL.'],
   unsupported: ['UNSUPPORTED MEDIA', 'This link is currently not supported.'],
   login_required: ['INSTAGRAM LOGIN REQUIRED', 'This post cannot be accessed anonymously.'],
+  extractor_error: ['MEDIA EXTRACTOR ERROR', 'The media extractor is temporarily unavailable.'],
   too_large: ['FILE TOO LARGE', 'The file exceeds the maximum 500 MB limit.'],
   general: ['SOMETHING WENT WRONG', 'Please try again.'],
 }
@@ -150,6 +151,7 @@ export default function UrlInput({ onPhaseChange }) {
       setErrorKind(
         error.code === 'invalid_url' ? 'invalid' :
         error.code === 'login_required' ? 'login_required' :
+        error.code === 'extractor_error' ? 'extractor_error' :
         error.code === 'unsupported_media' ? 'unsupported' :
         'general'
       )

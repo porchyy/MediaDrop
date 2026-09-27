@@ -409,6 +409,18 @@ class InstagramApiTest(unittest.TestCase):
         # Verify the adapter extract received the sanitized URL
         mock_extract.assert_called_once_with("https://www.instagram.com/p/C_clean/", timeout=unittest.mock.ANY)
 
+    def test_analyze_instagram_extractor_configuration_error_returns_500(self):
+        from app.gallery_extractor import ExtractorConfigurationError
+        with patch("app.main.is_safe_host", return_value=True), \
+             patch("app.gallery_extractor.InstagramAdapter.extract", new_callable=AsyncMock) as mock_extract:
+            mock_extract.side_effect = ExtractorConfigurationError("extractor_error: unrecognized arguments: --no-warnings")
+            r = api("POST", "/api/analyze", {"url": "https://www.instagram.com/p/C_config_err/"})
+
+        self.assertEqual(r.status_code, 500)
+        data = r.json()
+        self.assertEqual(data["code"], "extractor_error")
+        self.assertEqual(data["message"], "The media extractor is temporarily unavailable.")
+
 
 if __name__ == "__main__":
     unittest.main()

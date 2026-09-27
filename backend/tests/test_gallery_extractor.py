@@ -139,3 +139,54 @@ def test_instagram_adapter_url_handling():
     assert adapter.sanitize_url("https://www.instagram.com/p/C_abc123/?igsh=XYZ") == "https://www.instagram.com/p/C_abc123/"
 
 
+def test_build_gallery_dl_command():
+    from app.gallery_extractor import build_gallery_dl_command
+
+    target_url = "https://www.instagram.com/p/C_abc123/"
+    cmd = build_gallery_dl_command(target_url)
+
+    assert "--dump-json" in cmd
+    assert target_url in cmd
+    assert "--no-warnings" not in cmd
+    assert "--no-color" not in cmd
+
+    # With user_agent
+    ua = "Mozilla/5.0 MediaDrop"
+    cmd_ua = build_gallery_dl_command(target_url, user_agent=ua)
+    assert "--user-agent" in cmd_ua
+    assert ua in cmd_ua
+    assert "--no-warnings" not in cmd_ua
+    assert "--no-color" not in cmd_ua
+
+
+@pytest.mark.anyio
+async def test_instagram_adapter_unrecognized_arguments_raises_configuration_error():
+    from app.gallery_extractor import InstagramAdapter, ExtractorConfigurationError
+    from unittest.mock import patch
+
+    adapter = InstagramAdapter()
+    url = "https://www.instagram.com/p/C_test/"
+
+    with patch("app.gallery_extractor.run_gallery_dl_subprocess") as mock_sub:
+        mock_sub.return_value = ("", "python -m gallery_dl: error: unrecognized arguments: --no-warnings", 2)
+        with pytest.raises(ExtractorConfigurationError) as exc_info:
+            await adapter.extract(url)
+        assert "extractor_error" in str(exc_info.value)
+
+
+@pytest.mark.anyio
+async def test_instagram_adapter_login_required_raises_login_required_error():
+    from app.gallery_extractor import InstagramAdapter, LoginRequiredError
+    from unittest.mock import patch
+
+    adapter = InstagramAdapter()
+    url = "https://www.instagram.com/p/C_private/"
+
+    with patch("app.gallery_extractor.run_gallery_dl_subprocess") as mock_sub:
+        mock_sub.return_value = ("", "[instagram][error] 403 Forbidden: Login required to view post", 1)
+        with pytest.raises(LoginRequiredError) as exc_info:
+            await adapter.extract(url)
+        assert "login_required" in str(exc_info.value)
+
+
+
