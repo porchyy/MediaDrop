@@ -18,6 +18,7 @@ from app.gallery_extractor import (
     is_tiktok_photo_url,
     gallery_extractor,
     LoginRequiredError,
+    InstagramSessionError,
     ExtractorConfigurationError,
     sanitize_instagram_url,
 )
@@ -191,9 +192,12 @@ app = FastAPI(title="MediaDrop API", lifespan=lifespan)
 
 @app.get("/api/health")
 def health():
+    cookie_path = os.environ.get("INSTAGRAM_COOKIE_FILE", "")
+    instagram_session = "ok" if cookie_path and os.path.exists(cookie_path) else "missing"
     return {
         "status": "ok",
         "ffmpeg": bool(shutil.which("ffmpeg")),
+        "instagram_session": instagram_session,
     }
 
 
@@ -267,6 +271,11 @@ async def analyze(body: AnalyzeRequest):
                 return JSONResponse(
                     {"code": "extractor_error", "message": "The media extractor is temporarily unavailable."},
                     status_code=500,
+                )
+            except InstagramSessionError:
+                return JSONResponse(
+                    {"code": "instagram_session_error", "message": "Instagram is temporarily unavailable. Please try again later."},
+                    status_code=422,
                 )
             except LoginRequiredError:
                 return JSONResponse(

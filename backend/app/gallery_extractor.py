@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import re
 import sys
 from dataclasses import dataclass, field
@@ -14,6 +15,11 @@ class LoginRequiredError(Exception):
 
 class ExtractorConfigurationError(Exception):
     """Raised when the underlying gallery-dl CLI configuration or options fail (e.g. unrecognized arguments)."""
+    pass
+
+
+class InstagramSessionError(Exception):
+    """Raised when anonymous extraction hit a Login Wall and the Server Session Cookie also failed or is missing."""
     pass
 
 
@@ -79,11 +85,13 @@ class GalleryResult:
         return [it.to_dict() for it in self.items]
 
 
-def build_gallery_dl_command(url: str, user_agent: str | None = None) -> list[str]:
+def build_gallery_dl_command(url: str, user_agent: str | None = None, cookies_file: str | None = None) -> list[str]:
     """Build minimal, highly compatible gallery-dl CLI command arguments."""
     cmd = [sys.executable, "-m", "gallery_dl", "--dump-json"]
     if user_agent:
         cmd.extend(["--user-agent", user_agent])
+    if cookies_file:
+        cmd.extend(["--cookies", cookies_file])
     cmd.append(url)
     return cmd
 
@@ -287,10 +295,36 @@ class InstagramAdapter(BaseGalleryAdapter):
     async def extract(self, url: str, timeout: float = 15.0) -> GalleryResult:
         clean_url = self.sanitize_url(url)
         ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        cmd = build_gallery_dl_command(clean_url, user_agent=ua)
-        stdout, stderr, returncode = await run_gallery_dl_subprocess(cmd, timeout=timeout)
 
-        check_gallery_dl_subprocess_error(stderr, returncode)
+        # --- 8.8.2.3A: Anonymous Extract (no cookies) ---
+        anon_timeout = 10.0
+        cmd = build_gallery_dl_command(clean_url, user_agent=ua)
+        stdout, stderr, returncode = await run_gallery_dl_subprocess(cmd, timeout=anon_timeout)
+
+        try:
+            check_gallery_dl_subprocess_error(stderr, returncode)
+        except LoginRequiredError:
+            # --- 8.8.2.3B: Authenticated Extract (Server Session Cookie) ---
+            cookie_path = os.environ.get("INSTAGRAM_COOKIE_FILE", "")
+            if not cookie_path or not os.path.exists(cookie_path):
+                # No session configured — surface the original Login Wall to the caller.
+                raise
+
+            print(
+                f"[InstagramAdapter] Anonymous extract hit login wall; retrying with server session cookie.",
+                file=sys.stderr,
+            )
+
+            auth_timeout = 20.0
+            auth_cmd = build_gallery_dl_command(clean_url, user_agent=ua, cookies_file=cookie_path)
+            stdout, stderr, returncode = await run_gallery_dl_subprocess(auth_cmd, timeout=auth_timeout)
+
+            try:
+                check_gallery_dl_subprocess_error(stderr, returncode)
+            except (LoginRequiredError, RuntimeError) as exc:
+                raise InstagramSessionError(
+                    f"instagram_session_error: authenticated extract also failed: {exc}"
+                ) from exc
 
         title, items = parse_gallery_dl_entries(stdout, default_title="Instagram post")
         if not items:

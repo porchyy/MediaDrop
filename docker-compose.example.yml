@@ -1,0 +1,37 @@
+# docker-compose.example.yml
+#
+# This is a REFERENCE FILE — it is safe to commit (contains no real secrets).
+#
+# To deploy:
+#   1. Copy this file to docker-compose.yml  (docker-compose.yml is in .gitignore)
+#   2. Replace /srv/mediadrop/secrets/instagram-cookies.txt with the real path
+#      on your server where the cookie file is stored.
+#   3. Ensure the cookie file is in Netscape/Mozilla format (the format gallery-dl
+#      accepts via --cookies). It must belong to a dedicated MediaDrop Instagram
+#      account — never use a personal account.
+#   4. Restrict file permissions on the host:
+#        chmod 600 /srv/mediadrop/secrets/instagram-cookies.txt
+#
+# The cookie file is mounted read-only so the backend process cannot modify it.
+# The backend reads only the file path via INSTAGRAM_COOKIE_FILE — it never
+# reads or logs the file contents.
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      # Path inside the container where the cookie file will be available.
+      # Must match the container-side target of the volume mount below.
+      INSTAGRAM_COOKIE_FILE: /run/secrets/instagram-cookies.txt
+
+      # Optional tuning (defaults shown):
+      # STORAGE_TTL_MINUTES: "30"
+      # REQUEST_TIMEOUT: "5"
+      # YTDLP_TIMEOUT: "15"
+
+    volumes:
+      # Read-only bind mount: host path → container path
+      # Replace the host path with the real location of the cookie file on your server.
+      - /srv/mediadrop/secrets/instagram-cookies.txt:/run/secrets/instagram-cookies.txt:ro

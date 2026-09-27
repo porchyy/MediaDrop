@@ -109,5 +109,11 @@ Carousel ที่ประกอบด้วยสื่อหลากหล�
 **Extractor Configuration Error**:
 ข้อยกเว้นภายในระบบ Backend (`ExtractorConfigurationError`) ที่เกิดจากการส่ง CLI arguments หรือค่าคอนฟิกที่ไม่เข้ากันกับโปรแกรมดึงข้อมูลในสภาพแวดล้อมนั้น ๆ ส่งผลให้เซิร์ฟเวอร์ตอบกลับด้วยรหัส HTTP 500 (`extractor_error`)
 
+**Anonymous Extract**:
+การดึงข้อมูลสื่อโดยไม่ส่ง session หรือ cookie ใดๆ ไปยัง platform ต้นทาง เป็นวิธีที่ระบบเลือกใช้เป็นลำดับแรกเสมอ เพื่อลด exposure ของ Server Session Cookie และลดความเสี่ยงต่อบัญชี MediaDrop
 
+**Authenticated Extract**:
+การดึงข้อมูลสื่อโดยใช้ Server Session Cookie ของระบบ ทำเฉพาะเมื่อ Anonymous Extract ล้มเหลวเนื่องจาก Login Wall เท่านั้น ผู้ใช้ไม่รับรู้ว่ามีการ retry เกิดขึ้น
 
+**Server Session Cookie**:
+Cookie file format Netscape ของบัญชี Instagram เฉพาะ MediaDrop ที่ mount เข้า server แบบ read-only path อ่านจาก environment variable `INSTAGRAM_COOKIE_FILE` เท่านั้น ห้ามส่งผ่าน API ห้าม log และห้าม commit ลง version control

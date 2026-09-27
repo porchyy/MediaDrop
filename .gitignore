@@ -7,3 +7,9 @@ storage/
 backend/storage/
 .pytest_cache/
 backend/.pytest_cache/
+
+# Secrets — never commit
+secrets/
+*cookies*.txt
+.env
+docker-compose.yml

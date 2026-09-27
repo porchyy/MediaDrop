@@ -189,4 +189,100 @@ async def test_instagram_adapter_login_required_raises_login_required_error():
         assert "login_required" in str(exc_info.value)
 
 
+# ---------------------------------------------------------------------------
+# 8.8.2.3 — Anonymous-First Fallback Tests
+# ---------------------------------------------------------------------------
 
+_VALID_GALLERY_DL_JSON = (
+    '[[3, "https://scontent.cdninstagram.com/photo1.jpg",'
+    ' {"type": "image", "width": 1080, "height": 1350, "title": "Sunset"}]]'
+)
+_LOGIN_WALL_STDERR = "[instagram][error] 403 Forbidden: Login required to view post"
+
+
+@pytest.mark.anyio
+async def test_instagram_anonymous_success_no_fallback():
+    """Anonymous Extract succeeds → subprocess called exactly once, no authenticated retry."""
+    import json
+    from app.gallery_extractor import InstagramAdapter, GalleryResult
+    from unittest.mock import patch, call
+
+    adapter = InstagramAdapter()
+    url = "https://www.instagram.com/p/C_pub123/"
+
+    with patch("app.gallery_extractor.run_gallery_dl_subprocess") as mock_sub:
+        mock_sub.return_value = (_VALID_GALLERY_DL_JSON, "", 0)
+        result = await adapter.extract(url)
+
+    assert isinstance(result, GalleryResult)
+    assert result.platform == "instagram"
+    assert len(result.items) == 1
+    assert result.items[0].type == "image"
+    # Subprocess was called only once — no authenticated retry happened.
+    assert mock_sub.call_count == 1
+    first_cmd = mock_sub.call_args_list[0][0][0]
+    assert "--cookies" not in first_cmd
+
+
+@pytest.mark.anyio
+async def test_instagram_anonymous_fail_authenticated_succeeds():
+    """Anonymous Extract hits Login Wall → Authenticated Extract with --cookies succeeds."""
+    import os
+    import tempfile
+    from app.gallery_extractor import InstagramAdapter, GalleryResult
+    from unittest.mock import patch
+
+    adapter = InstagramAdapter()
+    url = "https://www.instagram.com/p/C_wall456/"
+
+    # Create a real temp file to simulate an existing cookie file.
+    with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
+        cookie_file = tmp.name
+
+    try:
+        with patch("app.gallery_extractor.run_gallery_dl_subprocess") as mock_sub, \
+             patch.dict(os.environ, {"INSTAGRAM_COOKIE_FILE": cookie_file}):
+            # First call (anonymous) → Login Wall; second call (authenticated) → success.
+            mock_sub.side_effect = [
+                ("", _LOGIN_WALL_STDERR, 1),
+                (_VALID_GALLERY_DL_JSON, "", 0),
+            ]
+            result = await adapter.extract(url)
+
+        assert isinstance(result, GalleryResult)
+        assert result.platform == "instagram"
+        assert mock_sub.call_count == 2
+        # Second call must include --cookies pointing at the cookie file.
+        second_cmd = mock_sub.call_args_list[1][0][0]
+        assert "--cookies" in second_cmd
+        assert cookie_file in second_cmd
+    finally:
+        os.unlink(cookie_file)
+
+
+@pytest.mark.anyio
+async def test_instagram_both_attempts_fail_raises_session_error():
+    """Anonymous Extract fails + Authenticated Extract also fails → InstagramSessionError raised."""
+    import os
+    import tempfile
+    from app.gallery_extractor import InstagramAdapter, InstagramSessionError
+    from unittest.mock import patch
+
+    adapter = InstagramAdapter()
+    url = "https://www.instagram.com/p/C_expired789/"
+
+    with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
+        cookie_file = tmp.name
+
+    try:
+        with patch("app.gallery_extractor.run_gallery_dl_subprocess") as mock_sub, \
+             patch.dict(os.environ, {"INSTAGRAM_COOKIE_FILE": cookie_file}):
+            # Both anonymous and authenticated calls return a Login Wall error.
+            mock_sub.return_value = ("", _LOGIN_WALL_STDERR, 1)
+            with pytest.raises(InstagramSessionError) as exc_info:
+                await adapter.extract(url)
+
+        assert "instagram_session_error" in str(exc_info.value)
+        assert mock_sub.call_count == 2
+    finally:
+        os.unlink(cookie_file)
