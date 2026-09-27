@@ -251,6 +251,8 @@ class TikTokAdapter(BaseGalleryAdapter):
         stdout, stderr, returncode = await run_gallery_dl_subprocess(cmd, timeout=timeout)
 
         check_gallery_dl_subprocess_error(stderr, returncode)
+        if "AbortExtraction" in stdout and "login" in stdout.lower():
+            raise LoginRequiredError("Login wall detected in JSON stdout")
 
         title, items = parse_gallery_dl_entries(stdout, default_title="TikTok photo post")
         photo_items = [it for it in items if it.type == "image"]
@@ -303,6 +305,8 @@ class InstagramAdapter(BaseGalleryAdapter):
 
         try:
             check_gallery_dl_subprocess_error(stderr, returncode)
+            if "AbortExtraction" in stdout and "login" in stdout.lower():
+                raise LoginRequiredError("Login wall detected in JSON stdout")
         except LoginRequiredError:
             # --- 8.8.2.3B: Authenticated Extract (Server Session Cookie) ---
             cookie_path = os.environ.get("INSTAGRAM_COOKIE_FILE", "")
@@ -321,6 +325,8 @@ class InstagramAdapter(BaseGalleryAdapter):
 
             try:
                 check_gallery_dl_subprocess_error(stderr, returncode)
+                if "AbortExtraction" in stdout and "login" in stdout.lower():
+                    raise LoginRequiredError("Login wall detected in JSON stdout")
             except (LoginRequiredError, RuntimeError) as exc:
                 raise InstagramSessionError(
                     f"instagram_session_error: authenticated extract also failed: {exc}"
