@@ -2,51 +2,63 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── CSS Variables — Pixel Palette & Typography ─────────── */
+/* ─── CSS Variables — Persona 5 Kinetic Palette & Typography ─────────── */
 :root {
-  --bg: #fbf9f5;
-  --surface: #ffffff;
-  --card-bg: #f1eef8;
-  --accent: #7c3aed;
-  --accent-purple: #7c3aed;
-  --accent-pink: #db2777;
-  --accent-cyan: #0891b2;
-  --accent-yellow: #ca8a04;
-  --accent-yellow-light: #fef08a;
-  --accent-green: #059669;
-  --border: #7c3aed;
-  --border-subtle: rgba(124, 58, 237, 0.25);
-  --text: #1e1b4b;
-  --muted: #475569;
-  --shadow: #1e1b4b;
-  --shadow-offset: #cbd5e1;
-  --on-accent: #ffffff;
-  --ink-navy: #1e1b4b;
-  --error: #b42318;
-  --font-sans: 'IBM Plex Sans Thai', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --font-pixel: 'Press Start 2P', monospace;
-}
+  --p5-black: #080808;
+  --p5-surface: #121212;
+  --p5-card-bg: #181818;
+  --p5-red: #E20B17;
+  --p5-dark-red: #8E0710;
+  --p5-white: #F4F1E8;
+  --p5-gray: #A7A7A7;
 
-.dark {
-  --bg: #0c0d14;
-  --surface: #151828;
-  --card-bg: #1e2238;
-  --accent: #a855f7;
-  --accent-purple: #a855f7;
-  --accent-pink: #f472b6;
-  --accent-cyan: #22d3ee;
+  --bg: #080808;
+  --surface: #121212;
+  --card-bg: #181818;
+  --accent: #E20B17;
+  --accent-red: #E20B17;
+  --accent-purple: #9D63FF;
+  --accent-pink: #FF4E91;
+  --accent-cyan: #35D7FF;
   --accent-yellow: #facc15;
   --accent-yellow-light: #fef08a;
   --accent-green: #34d399;
-  --border: #a855f7;
-  --border-subtle: rgba(168, 85, 247, 0.25);
-  --text: #f8fafc;
-  --muted: #94a3b8;
+  --border: #E20B17;
+  --border-subtle: rgba(226, 11, 23, 0.35);
+  --text: #F4F1E8;
+  --muted: #A7A7A7;
   --shadow: #000000;
-  --shadow-offset: #05060a;
-  --on-accent: #0c0d14;
-  --ink-navy: #1e1b4b;
-  --error: #ff9b91;
+  --shadow-offset: #8E0710;
+  --on-accent: #F4F1E8;
+  --ink-navy: #080808;
+  --error: #E20B17;
+
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-sans: 'IBM Plex Sans Thai', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-pixel: 'Press Start 2P', monospace;
+  --font-mono: 'Courier New', Courier, monospace;
+}
+
+.dark {
+  --bg: #080808;
+  --surface: #121212;
+  --card-bg: #181818;
+  --accent: #E20B17;
+  --accent-purple: #9D63FF;
+  --accent-pink: #FF4E91;
+  --accent-cyan: #35D7FF;
+  --accent-yellow: #facc15;
+  --accent-yellow-light: #fef08a;
+  --accent-green: #34d399;
+  --border: #E20B17;
+  --border-subtle: rgba(226, 11, 23, 0.35);
+  --text: #F4F1E8;
+  --muted: #A7A7A7;
+  --shadow: #000000;
+  --shadow-offset: #8E0710;
+  --on-accent: #F4F1E8;
+  --ink-navy: #080808;
+  --error: #E20B17;
 }
 
 /* ─── Base Styles ────────────────────────────────────────── */
@@ -69,31 +81,24 @@ body {
   overflow-x: hidden;
 }
 
-/* ─── Background Depth Layer (Radial Glows & Micro Dot Matrix Grid) ─── */
+/* ─── Background Depth Layer (Persona 5 Comic Halftone & Diagonal Accents) ─── */
 .bg-depth-layer {
   min-height: 100vh;
   background-color: var(--bg);
   background-image:
-    radial-gradient(circle at 50% 16%, rgba(124, 58, 237, 0.1) 0%, transparent 48%),
-    radial-gradient(circle at 35% 72%, rgba(219, 39, 119, 0.08) 0%, transparent 45%),
-    radial-gradient(circle at 65% 75%, rgba(8, 145, 178, 0.09) 0%, transparent 45%),
-    radial-gradient(circle, rgba(124, 58, 237, 0.09) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 100% 100%, 20px 20px;
+    radial-gradient(circle at 15% 15%, rgba(226, 11, 23, 0.14) 0%, transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(142, 7, 16, 0.18) 0%, transparent 50%),
+    radial-gradient(circle, rgba(226, 11, 23, 0.08) 1.2px, transparent 1.2px),
+    linear-gradient(135deg, rgba(226, 11, 23, 0.02) 25%, transparent 25%, transparent 50%, rgba(226, 11, 23, 0.02) 50%, rgba(226, 11, 23, 0.02) 75%, transparent 75%, transparent);
+  background-size: 100% 100%, 100% 100%, 20px 20px, 40px 40px;
   background-attachment: fixed;
 }
 
 .dark .bg-depth-layer {
   background-color: var(--bg);
-  background-image:
-    radial-gradient(circle at 50% 16%, rgba(168, 85, 247, 0.16) 0%, transparent 50%),
-    radial-gradient(circle at 30% 72%, rgba(244, 114, 182, 0.11) 0%, transparent 45%),
-    radial-gradient(circle at 70% 75%, rgba(34, 211, 238, 0.11) 0%, transparent 45%),
-    radial-gradient(circle, rgba(168, 85, 247, 0.12) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 100% 100%, 20px 20px;
-  background-attachment: fixed;
 }
 
-/* ─── Pixel Utilities ────────────────────────────────────── */
+/* ─── Pixel & Kinetic Utilities ──────────────────────────── */
 .pixel-border {
   border: 2px solid var(--border);
   box-shadow: 4px 4px 0 var(--shadow);
@@ -1274,3 +1279,786 @@ body {
   border-color: #0284c7;
   box-shadow: 3px 3px 0 #000000;
 }
+
+/* ══════════════════════════════════════════════════════════════
+   PHASE 8.8.2.4: PERSONA-INSPIRED KINETIC UI OVERHAUL
+   ══════════════════════════════════════════════════════════════ */
+
+/* ─── 1. Typography & Skew Geometry ────────────────────────── */
+.font-display {
+  font-family: var(--font-display), 'Bebas Neue', sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.skew-p5 {
+  transform: skewX(-4deg);
+}
+
+.unskew-p5 {
+  transform: skewX(4deg);
+}
+
+.clipped-corner {
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+}
+
+.clipped-corner-lg {
+  clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
+}
+
+.clipped-slant {
+  clip-path: polygon(0 0, 100% 0, calc(100% - 16px) 100%, 0 100%);
+}
+
+.p5-offset-shadow {
+  box-shadow: 5px 5px 0 #000000, 9px 9px 0 var(--p5-dark-red);
+}
+
+/* ─── 2. Magnetic & Kinetic Buttons ────────────────────────── */
+.magnetic-btn-wrapper {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.magnetic-btn {
+  position: relative;
+  cursor: pointer;
+  outline: none;
+  border: none;
+  background: transparent;
+  will-change: transform;
+}
+
+.magnetic-btn:focus-visible {
+  outline: 3px solid var(--p5-red);
+  outline-offset: 3px;
+}
+
+.kinetic-cursor-badge {
+  position: absolute;
+  background: var(--p5-red);
+  color: #ffffff;
+  font-family: var(--font-display), sans-serif;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  padding: 0.15rem 0.5rem;
+  pointer-events: none;
+  z-index: 20;
+  transform: skewX(-6deg);
+  box-shadow: 2px 2px 0 #000000;
+  white-space: nowrap;
+  animation: p5-badge-pop 0.15s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+.kinetic-cursor-badge--bottom-right {
+  right: -8px;
+  bottom: -12px;
+}
+
+.kinetic-cursor-badge--top-right {
+  right: -8px;
+  top: -12px;
+}
+
+@keyframes p5-badge-pop {
+  0% { opacity: 0; transform: skewX(-6deg) scale(0.7) translateY(4px); }
+  100% { opacity: 1; transform: skewX(-6deg) scale(1) translateY(0); }
+}
+
+/* ─── 3. Diagonal Slash Transition Overlay (////////) ──────── */
+.slash-transition-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.slash-bar {
+  position: absolute;
+  width: 160%;
+  left: -30%;
+  height: 38%;
+  transform: rotate(-12deg) translateX(-120%);
+}
+
+.slash-bar--1 {
+  top: -10%;
+  background: var(--p5-red);
+  animation: slash-sweep 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.slash-bar--2 {
+  top: 32%;
+  background: var(--p5-dark-red);
+  animation: slash-sweep 0.42s cubic-bezier(0.16, 1, 0.3, 1) 0.04s forwards;
+}
+
+.slash-bar--3 {
+  top: 74%;
+  background: var(--p5-red);
+  animation: slash-sweep 0.42s cubic-bezier(0.16, 1, 0.3, 1) 0.08s forwards;
+}
+
+.slash-accent-text {
+  position: absolute;
+  top: 48%;
+  left: 50%;
+  transform: translate(-50%, -50%) skewX(-12deg);
+  font-family: var(--font-display), sans-serif;
+  font-size: 2.2rem;
+  letter-spacing: 0.15em;
+  color: #ffffff;
+  z-index: 2;
+  text-shadow: 3px 3px 0 #000;
+  animation: slash-text-pop 0.42s ease forwards;
+}
+
+@keyframes slash-sweep {
+  0% { transform: rotate(-12deg) translateX(-130%); }
+  45% { transform: rotate(-12deg) translateX(0%); }
+  100% { transform: rotate(-12deg) translateX(130%); }
+}
+
+@keyframes slash-text-pop {
+  0% { opacity: 0; transform: translate(-50%, -50%) skewX(-12deg) scale(0.85); }
+  40% { opacity: 1; transform: translate(-50%, -50%) skewX(-12deg) scale(1.05); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) skewX(-12deg) scale(1.15); }
+}
+
+/* ─── 4. Impact Flash Overlay ──────────────────────────────── */
+.impact-flash-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(226, 11, 23, 0.65);
+  z-index: 9998;
+  pointer-events: none;
+  animation: impact-flash-anim 0.14s ease-out forwards;
+}
+
+@keyframes impact-flash-anim {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ─── 5. Glitch Text ───────────────────────────────────────── */
+.glitch-text-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.glitch-slice {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.glitch-active .glitch-slice--top {
+  clip-path: inset(0 0 52% 0);
+  color: var(--accent-cyan);
+  transform: translate(-3px, -1px);
+  animation: glitch-anim-1 0.24s steps(2) forwards;
+}
+
+.glitch-active .glitch-slice--bottom {
+  clip-path: inset(48% 0 0 0);
+  color: var(--p5-red);
+  transform: translate(3px, 1px);
+  animation: glitch-anim-2 0.24s steps(2) forwards;
+}
+
+@keyframes glitch-anim-1 {
+  0% { transform: translate(-4px, -1px); opacity: 0.9; }
+  50% { transform: translate(3px, 1px); opacity: 0.7; }
+  100% { transform: translate(0, 0); opacity: 0; }
+}
+
+@keyframes glitch-anim-2 {
+  0% { transform: translate(4px, 1px); opacity: 0.9; }
+  50% { transform: translate(-3px, -1px); opacity: 0.7; }
+  100% { transform: translate(0, 0); opacity: 0; }
+}
+
+/* ─── 6. StatusTag Micro Labels ────────────────────────────── */
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-display), sans-serif;
+  letter-spacing: 0.08em;
+  font-size: 0.85rem;
+  padding: 0.15rem 0.55rem;
+  line-height: 1.1;
+  text-transform: uppercase;
+  user-select: none;
+  box-shadow: 2px 2px 0 #000000;
+}
+
+.status-tag--red {
+  background: var(--p5-red);
+  color: #ffffff;
+}
+
+.status-tag--dark {
+  background: #141414;
+  color: var(--p5-white);
+  border: 1px solid var(--p5-red);
+}
+
+.status-tag--outline {
+  border: 1px solid var(--p5-gray);
+  color: var(--p5-gray);
+  background: transparent;
+}
+
+.status-tag--slash {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--p5-red),
+    var(--p5-red) 6px,
+    var(--p5-dark-red) 6px,
+    var(--p5-dark-red) 12px
+  );
+  color: #ffffff;
+}
+
+.status-tag--skew {
+  transform: skewX(-6deg);
+}
+
+.status-tag--skew .status-tag-inner {
+  transform: skewX(6deg);
+  display: inline-block;
+}
+
+/* ─── 7. Persona Hero Overhaul ─────────────────────────────── */
+.p5-hero-container {
+  position: relative;
+  text-align: center;
+  padding: 1.5rem 0 0.5rem;
+}
+
+.p5-hero-giant-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.p5-hero-giant-title {
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(3.5rem, 9vw, 5.5rem);
+  line-height: 0.9;
+  letter-spacing: 0.03em;
+  color: var(--p5-white);
+  text-shadow: 4px 4px 0 #000000, 7px 7px 0 var(--p5-dark-red);
+  transform: skewX(-5deg);
+  display: inline-block;
+  margin: 0;
+}
+
+.p5-hero-giant-title .title-accent {
+  color: #ffffff;
+  background: var(--p5-red);
+  padding: 0 0.45rem;
+  display: inline-block;
+  box-shadow: 3px 3px 0 #000;
+  transform: skewX(-3deg);
+}
+
+.p5-hero-ribbon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--p5-red);
+  color: #ffffff;
+  padding: 0.35rem 1.25rem;
+  transform: skewX(-6deg);
+  box-shadow: 4px 4px 0 #000000;
+  margin-top: 0.5rem;
+}
+
+.p5-hero-ribbon-inner {
+  transform: skewX(6deg);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.05rem;
+  letter-spacing: 0.08em;
+}
+
+.p5-hero-meta-tag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.75rem;
+  color: var(--p5-gray);
+  letter-spacing: 0.05em;
+}
+
+/* ─── 8. Persona Tactical URL Field ────────────────────────── */
+.p5-url-field {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  background: #111111;
+  border: 2px solid var(--p5-red);
+  box-shadow: 5px 5px 0 #000000, 8px 8px 0 var(--p5-dark-red);
+  transform: skewX(-3deg);
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.p5-url-field:focus-within {
+  border-color: #ff2a36;
+  box-shadow: 6px 6px 0 #000000, 11px 11px 0 var(--p5-red);
+}
+
+.p5-url-field .p5-url-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--p5-white);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  padding: 0.95rem 5.5rem 0.95rem 2.85rem;
+  outline: none;
+  transform: skewX(3deg);
+}
+
+.p5-url-field .p5-url-input::placeholder {
+  color: #777777;
+}
+
+/* ─── 9. Persona Analyze Button (Tactical Impact) ──────────── */
+.p5-analyze-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  width: 100%;
+  background: var(--p5-red);
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  padding: 0.85rem 1.75rem;
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.5rem;
+  letter-spacing: 0.08em;
+  transform: skewX(-4deg);
+  box-shadow: 5px 5px 0 #000000, 8px 8px 0 var(--p5-dark-red);
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.08s ease, filter 0.15s ease;
+}
+
+.p5-analyze-btn-inner {
+  transform: skewX(4deg);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.p5-analyze-btn:hover {
+  filter: brightness(1.18);
+  box-shadow: 6px 6px 0 #000000, 10px 10px 0 #ffffff;
+}
+
+.p5-analyze-btn:active {
+  transform: skewX(-4deg) translate(2px, 2px);
+  box-shadow: 3px 3px 0 #000000;
+}
+
+/* ─── 10. Persona Analyzing Scene (Kinetic Loading Scene) ──── */
+.p5-analyzing-panel {
+  background: #0d0d0d;
+  border: 2px solid var(--p5-red);
+  box-shadow: 6px 6px 0 #000000, 10px 10px 0 var(--p5-dark-red);
+  padding: 1.75rem 1.5rem;
+  position: relative;
+  overflow: hidden;
+  transform: skewX(-2deg);
+}
+
+.p5-analyzing-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--p5-dark-red);
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.25rem;
+  transform: skewX(2deg);
+}
+
+.p5-analyzing-title {
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.85rem;
+  letter-spacing: 0.08em;
+  color: #ffffff;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.p5-analyzing-badge {
+  background: var(--p5-red);
+  color: #fff;
+  font-size: 0.85rem;
+  padding: 0.15rem 0.5rem;
+  box-shadow: 2px 2px 0 #000;
+}
+
+.p5-stepper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  transform: skewX(2deg);
+}
+
+.p5-step-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.2rem;
+  letter-spacing: 0.05em;
+  padding: 0.45rem 0.75rem;
+  background: #141414;
+  border-left: 4px solid #333333;
+  transition: all 0.25s ease;
+}
+
+.p5-step-item--done {
+  border-left-color: var(--accent-cyan);
+  color: #ffffff;
+  background: #1a1a1a;
+}
+
+.p5-step-item--active {
+  border-left-color: var(--p5-red);
+  background: rgba(226, 11, 23, 0.18);
+  color: #ffffff;
+  box-shadow: 2px 2px 0 #000;
+}
+
+.p5-step-item--pending {
+  color: #666666;
+  opacity: 0.6;
+}
+
+.p5-step-marker {
+  font-size: 1rem;
+  min-width: 1.5rem;
+  text-align: right;
+}
+
+.p5-step-marker--active {
+  animation: p5-dot-pulse 0.8s infinite steps(2);
+  color: var(--p5-red);
+}
+
+@keyframes p5-dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+.p5-analyzing-progress-bar {
+  height: 8px;
+  background: #1f1f1f;
+  margin: 1.25rem 0 0.5rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 1px 1px 2px #000;
+  transform: skewX(2deg);
+}
+
+.p5-analyzing-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--p5-red), #ff3d48);
+  box-shadow: 0 0 10px rgba(226, 11, 23, 0.6);
+  transition: width 0.3s ease;
+}
+
+.p5-analyzing-abort-btn {
+  background: transparent;
+  border: 1px solid var(--p5-red);
+  color: var(--p5-red);
+  font-family: var(--font-display), sans-serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  padding: 0.35rem 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  user-select: none;
+}
+
+.p5-analyzing-abort-btn:hover {
+  background: var(--p5-red);
+  color: #ffffff;
+}
+
+/* ─── 11. Persona Result Card Layering ─────────────────────── */
+.p5-result-container {
+  position: relative;
+  transform: skewX(-3deg);
+  transition: transform 0.2s ease;
+}
+
+.p5-result-card {
+  background: #101010;
+  border: 2px solid var(--p5-red);
+  box-shadow: 6px 6px 0 #000000, 11px 11px 0 var(--p5-dark-red);
+  position: relative;
+  overflow: hidden;
+}
+
+.p5-result-inner {
+  transform: skewX(3deg);
+}
+
+.p5-media-viewport {
+  position: relative;
+  background: #050505;
+  border-bottom: 2px solid var(--p5-red);
+  overflow: hidden;
+}
+
+/* Counter-skew media to keep original aspect ratio */
+.p5-media-viewport img,
+.p5-media-viewport video {
+  transform: skewX(0deg) !important;
+  display: block;
+}
+
+/* Oversized Format Selector Grid */
+.p5-format-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin: 1.25rem 0;
+}
+
+.p5-format-option {
+  position: relative;
+  background: #161616;
+  border: 2px solid #333333;
+  padding: 0.85rem 0.5rem;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  transform: skewX(-4deg);
+  box-shadow: 3px 3px 0 #000000;
+  transition: border-color 0.15s, transform 0.15s, background-color 0.15s;
+}
+
+.p5-format-option-inner {
+  transform: skewX(4deg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.p5-format-option .format-name {
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.45rem;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  color: var(--p5-white);
+}
+
+.p5-format-option .format-desc {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.7rem;
+  color: var(--p5-gray);
+  letter-spacing: 0.04em;
+}
+
+.p5-format-option:hover {
+  border-color: var(--p5-red);
+  transform: skewX(-4deg) translateY(-2px);
+  box-shadow: 4px 4px 0 #000000, 6px 6px 0 var(--p5-dark-red);
+}
+
+.p5-format-option--active {
+  background: #200507;
+  border-color: var(--p5-red);
+  box-shadow: 4px 4px 0 #000000, 7px 7px 0 var(--p5-red);
+}
+
+.p5-format-option--active .format-name {
+  color: #ffffff;
+}
+
+.p5-format-option--active::after {
+  content: 'SELECTED';
+  position: absolute;
+  top: -8px;
+  right: -6px;
+  background: var(--p5-red);
+  color: #ffffff;
+  font-family: var(--font-display), sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  padding: 0.1rem 0.4rem;
+  box-shadow: 1px 1px 0 #000;
+  transform: skewX(-4deg);
+}
+
+/* Format specific active borders */
+.p5-format-option--active-audio {
+  border-color: var(--accent-pink);
+  box-shadow: 4px 4px 0 #000, 7px 7px 0 var(--accent-pink);
+}
+.p5-format-option--active-audio::after { background: var(--accent-pink); }
+
+.p5-format-option--active-video {
+  border-color: var(--accent-purple);
+  box-shadow: 4px 4px 0 #000, 7px 7px 0 var(--accent-purple);
+}
+.p5-format-option--active-video::after { background: var(--accent-purple); }
+
+.p5-format-option--active-image {
+  border-color: var(--accent-cyan);
+  box-shadow: 4px 4px 0 #000, 7px 7px 0 var(--accent-cyan);
+}
+.p5-format-option--active-image::after { background: var(--accent-cyan); color: #000; }
+
+/* ─── 12. Tactical Error State with Hazard Strip ───────────── */
+.p5-error-panel {
+  background: #140507;
+  border: 2px solid var(--p5-red);
+  box-shadow: 6px 6px 0 #000000, 10px 10px 0 var(--p5-dark-red);
+  position: relative;
+  overflow: hidden;
+  transform: skewX(-3deg);
+  padding: 1.5rem;
+}
+
+.p5-hazard-strip {
+  height: 8px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--p5-red),
+    var(--p5-red) 10px,
+    #000000 10px,
+    #000000 20px
+  );
+  margin-bottom: 1rem;
+  transform: skewX(3deg);
+}
+
+.p5-error-content {
+  transform: skewX(3deg);
+}
+
+.p5-error-code {
+  font-family: var(--font-display), sans-serif;
+  font-size: 2rem;
+  letter-spacing: 0.08em;
+  color: #ff3341;
+  margin: 0 0 0.5rem;
+}
+
+.p5-error-desc {
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  color: var(--p5-white);
+  margin: 0 0 1.25rem;
+}
+
+/* ─── 13. Reduced Motion & Calm Mode Overrides ─────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .skew-p5,
+  .unskew-p5,
+  .p5-hero-giant-title,
+  .p5-hero-ribbon,
+  .p5-url-field,
+  .p5-analyze-btn,
+  .p5-analyzing-panel,
+  .p5-result-container,
+  .p5-format-option,
+  .p5-error-panel {
+    transform: none !important;
+  }
+
+  .slash-transition-overlay,
+  .impact-flash-overlay {
+    display: none !important;
+  }
+
+  .glitch-slice {
+    display: none !important;
+  }
+
+  .magnetic-btn {
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+.motion-calm .skew-p5,
+.motion-calm .unskew-p5,
+.motion-calm .p5-hero-giant-title,
+.motion-calm .p5-hero-ribbon,
+.motion-calm .p5-url-field,
+.motion-calm .p5-analyze-btn,
+.motion-calm .p5-analyzing-panel,
+.motion-calm .p5-result-container,
+.motion-calm .p5-format-option,
+.motion-calm .p5-error-panel {
+  transform: none !important;
+}
+
+.motion-calm .slash-transition-overlay,
+.motion-calm .impact-flash-overlay {
+  display: none !important;
+}
+
+.motion-calm .glitch-slice {
+  display: none !important;
+}
+
+.motion-calm .magnetic-btn {
+  transform: none !important;
+  transition: none !important;
+}
+
+/* ─── 14. Lightbox Modal & A11y Focus Styling ─────────────── */
+.p5-lightbox-overlay {
+  animation: p5-fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes p5-fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.p5-lightbox-close-btn:hover {
+  background: var(--p5-red) !important;
+  color: #ffffff !important;
+}
+
+.result-thumbnail-hero:hover .lightbox-expand-hint {
+  background: var(--p5-red) !important;
+  color: #ffffff !important;
+}
+
+/* Skewed Focus Ring Accessibility */
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--p5-white) !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 4px var(--p5-red) !important;
+}
+

@@ -709,6 +709,100 @@ test('UrlInput defines dedicated extractor_error for media extractor configurati
   }
 })
 
+// ── Phase 8.8.2.4: Persona-Inspired Kinetic UI Overhaul ──────────────────────
+
+test('Header renders motion mode toggle button with DYNAMIC / CALM labels', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { Header } = await loadModules(server)
+    const html = renderToStaticMarkup(createElement(Header, { theme: 'dark', onToggle: () => {} }))
+    assert.match(html, /theme-toggle/)
+    assert.match(html, /DYNAMIC|CALM/)
+    assert.match(html, /ONLINE/)
+  } finally {
+    await server.close()
+  }
+})
+
+test('UrlInput renders magnetic analyze button with p5-analyze-btn and glitch text wrapper', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { UrlInput } = await loadModules(server)
+    const html = renderToStaticMarkup(createElement(UrlInput))
+    assert.match(html, /p5-analyze-btn/)
+    assert.match(html, /glitch-text-wrapper/)
+    assert.match(html, /ANALYZE/)
+    assert.match(html, /p5-url-field/)
+  } finally {
+    await server.close()
+  }
+})
+
+test('ResultCard renders oversized format selector options with p5-format-grid', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { ResultCard } = await loadModules(server)
+    const media = { title: 'Persona Track', duration: 180, media_type: 'audio', available_formats: ['video', 'audio', 'image'] }
+    const html = renderToStaticMarkup(createElement(ResultCard, { phase: 'result', format: 'MP3', quality: 'Best', media }))
+    assert.match(html, /p5-format-grid/)
+    assert.match(html, /p5-format-option/)
+    assert.match(html, /AUDIO STREAM/)
+    assert.match(html, /p5-result-card/)
+  } finally {
+    await server.close()
+  }
+})
+
+test('LightboxModal renders accessible dialog with close button and keyboard hint', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { default: LightboxModal } = await server.ssrLoadModule('/src/components/kinetic/LightboxModal.jsx')
+    const items = [
+      { url: 'https://example.com/1.jpg', type: 'image' },
+      { url: 'https://example.com/2.jpg', type: 'image' },
+    ]
+    const html = renderToStaticMarkup(createElement(LightboxModal, {
+      isOpen: true,
+      items,
+      currentIndex: 0,
+      title: 'Gallery Post',
+    }))
+    assert.match(html, /role="dialog"/)
+    assert.match(html, /p5-lightbox-card/)
+    assert.match(html, /Gallery Post/)
+    assert.match(html, /1 \/ 2/)
+    assert.match(html, /CLOSE/)
+    assert.match(html, /KEYBOARD: \[←\/→\] NAVIGATE/)
+  } finally {
+    await server.close()
+  }
+})
+
+test('ResultCard renders packaging ZIP archiving state during multi-photo processing', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { ResultCard } = await loadModules(server)
+    const galleryMedia = {
+      title: 'TikTok Album',
+      media_type: 'gallery',
+      image_count: 8,
+      images: Array.from({ length: 8 }, (_, i) => ({ index: i, url: `https://example.com/${i}.jpg` })),
+      available_formats: ['image'],
+    }
+    const processingJob = { status: 'processing', progress: 100 }
+    const html = renderToStaticMarkup(createElement(ResultCard, {
+      phase: 'processing',
+      format: 'IMAGE',
+      quality: 'Original',
+      media: galleryMedia,
+      job: processingJob,
+    }))
+    assert.match(html, /PACKAGING 8 PHOTOS INTO \.ZIP \/\/ ARCHIVING/)
+  } finally {
+    await server.close()
+  }
+})
+
 
 
 

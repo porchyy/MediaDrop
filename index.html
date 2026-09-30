@@ -6,28 +6,22 @@
     <title>MediaDrop</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-    <!-- Google Fonts: Press Start 2P & IBM Plex Sans Thai -->
+    <!-- Google Fonts: Bebas Neue, Press Start 2P & IBM Plex Sans Thai -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Press+Start+2P&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Press+Start+2P&display=swap"
       rel="stylesheet"
     />
 
-    <!-- Prevent FOUC: apply saved theme before React hydrates -->
+    <!-- Prevent FOUC: apply dark mode & saved motion preference -->
     <script>
       (function () {
         try {
-          var stored = localStorage.getItem('mediadrop-theme');
-          if (stored === 'light') {
-            document.documentElement.classList.remove('dark');
-          } else if (stored === 'dark') {
-            document.documentElement.classList.add('dark');
-          } else {
-            // fallback to system preference
-            if (!window.matchMedia('(prefers-color-scheme: dark)').matches) {
-              document.documentElement.classList.remove('dark');
-            }
+          document.documentElement.classList.add('dark');
+          var motion = localStorage.getItem('mediadrop-motion');
+          if (motion === 'calm' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            document.documentElement.classList.add('motion-calm');
           }
         } catch (e) {}
       })();

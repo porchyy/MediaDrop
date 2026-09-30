@@ -117,3 +117,21 @@ Carousel ที่ประกอบด้วยสื่อหลากหล�
 
 **Server Session Cookie**:
 Cookie file format Netscape ของบัญชี Instagram เฉพาะ MediaDrop ที่ mount เข้า server แบบ read-only path อ่านจาก environment variable `INSTAGRAM_COOKIE_FILE` เท่านั้น ห้ามส่งผ่าน API ห้าม log และห้าม commit ลง version control
+
+**Kinetic UI**:
+ระบบการเคลื่อนไหวและการตอบสนองของส่วนติดต่อผู้ใช้ที่ได้รับแรงบันดาลใจจากสไตล์ Persona 5 เน้นความเร็ว (snappy), ความเหลี่ยมเฉียง (diagonal geometry), ลวดลาย halftone แบบคอมมิค และการตอบสนองเชิงภาพ (visual feedback) ในทุกจังหวะการโต้ตอบของผู้ใช้
+
+**Persona Palette**:
+ระบบสีหลักของเว็บตามสูตร 70/20/10 ได้แก่ สีดำสนิท Black (#080808) 70%, สีขาวครีม Off-White (#F4F1E8) 20%, และสีแดงเพลิง Crimson Red (#E20B17 / #8E0710) 10% พร้อมสี accent เฉพาะสถานะประเภทสื่อ (Cyan สำหรับ Image, Purple สำหรับ Video, Pink สำหรับ Audio)
+
+**Diagonal Slash Transition**:
+ทรานซิชันเปลี่ยนฉากแบบเฉียงที่ใช้แถบสีแดงวิ่งตัดผ่านหน้าจออย่างรวดเร็ว (300–500ms) ระหว่างการสลับสถานะหน้าจอ เช่น จากการกด Analyze ไปยัง Analyzing Scene
+
+**Impact Feedback**:
+ลำดับการตอบสนองเชิงสายตาแบบทันที (micro-animation sequence) บนปุ่มกดหลัก เช่น จังหวะปุ่มยุบตัว (0ms) ➔ ประกายสีแดงวาบ (50ms) ➔ เส้นเฉียงฟาด (100ms) เพื่อให้รู้สึกถึงความหนักแน่นและ tactile impact
+
+**Analyzing Scene**:
+หน้าจอแสดงสถานะการวิเคราะห์ข้อมูลสื่อที่เปลี่ยนจากสปินเนอร์ธรรมดาเป็นฉากเทคนิคัลแบบเป็นขั้นเป็นตอน (01 PARSING, 02 FINDING, 03 EXTRACTING, 04 BUILDING) พร้อมแบ็คกราวด์เส้นเฉียงและ halftone
+
+**Magnetic Button**:
+ปุ่มกดสำคัญที่มีแรงดึงดูดเล็กน้อยเข้าหาเคอร์เซอร์เมาส์ (ระยะเคลื่อนที่สูงสุด 4–8px) โดยใช้ CSS variables หรือ requestAnimationFrame เพื่อสร้างมิติสัมผัสที่มีชีวิตชีวา

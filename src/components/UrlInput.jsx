@@ -3,6 +3,11 @@ import { Clipboard } from 'lucide-react'
 import { analyzeMedia } from '../api/analyzeMedia'
 import { startDownloadJob, pollJobStatus, cancelDownloadJob } from '../api/downloadMedia'
 import ResultCard from './ResultCard'
+import MagneticButton from './kinetic/MagneticButton'
+import SlashTransition from './kinetic/SlashTransition'
+import ImpactFlash from './kinetic/ImpactFlash'
+import GlitchText from './kinetic/GlitchText'
+import HalftoneLayer from './kinetic/HalftoneLayer'
 
 export function isValidMediaUrl(value) {
   try {
@@ -47,6 +52,10 @@ export default function UrlInput({ onPhaseChange }) {
   const [job, setJob] = useState(null)
   const [format, setFormat] = useState('VIDEO')
   const [quality, setQuality] = useState('Best')
+  const [slashActive, setSlashActive] = useState(false)
+  const [impactTrigger, setImpactTrigger] = useState(0)
+  const [analyzingStep, setAnalyzingStep] = useState(1)
+
   const pending = useRef(null)
   const pasteVersion = useRef(0)
   const resultHeading = useRef(null)
@@ -71,6 +80,22 @@ export default function UrlInput({ onPhaseChange }) {
     }
   }, [phase])
 
+  // Stepped progression during Analyzing Scene
+  useEffect(() => {
+    if (phase !== 'analyzing') {
+      setAnalyzingStep(1)
+      return
+    }
+    const t1 = setTimeout(() => setAnalyzingStep(2), 220)
+    const t2 = setTimeout(() => setAnalyzingStep(3), 480)
+    const t3 = setTimeout(() => setAnalyzingStep(4), 720)
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+      clearTimeout(t3)
+    }
+  }, [phase])
+
   const cancelPending = () => {
     pending.current?.cancel()
     pending.current = null
@@ -86,6 +111,13 @@ export default function UrlInput({ onPhaseChange }) {
     setJob(null)
     setFormat('VIDEO')
     setQuality('Best')
+    setAnalyzingStep(1)
+  }
+
+  const handleAbort = () => {
+    cancelPending()
+    setPhase('idle')
+    setImpactTrigger(t => t + 1)
   }
 
   const updateUrl = value => {
@@ -100,6 +132,8 @@ export default function UrlInput({ onPhaseChange }) {
     setQuality('Best')
   }
 
+  const [clipboardWarning, setClipboardWarning] = useState(false)
+
   const handlePaste = async () => {
     if (pending.current !== null) return
     const version = ++pasteVersion.current
@@ -107,8 +141,16 @@ export default function UrlInput({ onPhaseChange }) {
       const text = await navigator.clipboard.readText()
       if (version === pasteVersion.current && pending.current === null) updateUrl(text)
     } catch (_) {
-      // clipboard access denied — silent fail
+      setClipboardWarning(true)
+      setTimeout(() => setClipboardWarning(false), 3000)
     }
+  }
+
+  const cancelActiveDownload = () => {
+    pending.current?.cancel()
+    pending.current = null
+    setPhase('result')
+    setImpactTrigger(t => t + 1)
   }
 
   const analyze = async event => {
@@ -126,14 +168,31 @@ export default function UrlInput({ onPhaseChange }) {
     setJob(null)
     setFormat('VIDEO')
     setQuality('Best')
+
+    // Persona 5 impact sequence: flash + slash
+    setImpactTrigger(t => t + 1)
+    setSlashActive(true)
+
     setPhase('analyzing')
+    setAnalyzingStep(1)
+
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 10000)
     const operation = { cancel: () => { clearTimeout(timeout); controller.abort() } }
     pending.current = operation
+
+    const startTime = Date.now()
     try {
       const result = await analyzeMedia(url.trim(), controller.signal)
       if (pending.current !== operation) return
+
+      // Minimum dramatic window (~750ms) so user experiences the kinetic scene
+      const elapsed = Date.now() - startTime
+      if (elapsed < 750) {
+        await new Promise(r => setTimeout(r, 750 - elapsed))
+      }
+      if (pending.current !== operation) return
+
       // Derive initial Format from what the analyzer found
       const avail = result.available_formats ?? []
       const initialFormat =
@@ -258,15 +317,19 @@ export default function UrlInput({ onPhaseChange }) {
       : ''
 
   return (
-    <section className="analyze-section">
+    <section className="analyze-section" style={{ position: 'relative' }}>
+      {/* Overlays for Persona Signature Transitions */}
+      <SlashTransition active={slashActive} onComplete={() => setSlashActive(false)} />
+      <ImpactFlash trigger={impactTrigger} />
+
       <p className="sr-only" role="status">{announcement}</p>
       <form onSubmit={analyze} noValidate className="analyze-form">
-        <div className="url-field">
+        <div className="url-field p5-url-field">
           <span className="url-input-icon" aria-hidden="true">
-            {isReady && <span className="url-valid-check">✓</span>}
+            {isReady && <span className="url-valid-check" style={{ color: 'var(--accent-cyan)' }}>✓</span>}
           </span>
           <input
-            className="pixel-input"
+            className="pixel-input p5-url-input"
             type="url"
             value={url}
             onChange={event => updateUrl(event.target.value)}
@@ -274,7 +337,7 @@ export default function UrlInput({ onPhaseChange }) {
             aria-label="Media URL"
             aria-describedby={phase === 'error' ? 'url-error' : 'url-hint'}
             aria-invalid={errorKind === 'invalid'}
-            placeholder="Paste your link here..."
+            placeholder="Paste your media URL..."
             spellCheck={false}
             autoComplete="off"
             style={{ paddingRight: '5.5rem', paddingLeft: '2.5rem' }}
@@ -288,16 +351,45 @@ export default function UrlInput({ onPhaseChange }) {
             className="paste-btn paste-btn--cyan"
           >
             <Clipboard size={14} />
-            <span className="paste-text">PASTE</span>
+            <span className="paste-text font-display" style={{ fontSize: '1rem', letterSpacing: '0.05em' }}>PASTE</span>
           </button>
+          {clipboardWarning && (
+            <span
+              className="kinetic-cursor-badge"
+              style={{
+                position: 'absolute',
+                top: '-1.85rem',
+                right: '0',
+                background: 'var(--p5-red)',
+                color: '#fff',
+                fontFamily: 'monospace',
+                fontSize: '0.75rem',
+                zIndex: 20,
+              }}
+            >
+              ↳ CLIPBOARD LOCKED // PASTE MANUALLY
+            </span>
+          )}
         </div>
+
         {phase === 'error' ? (
-          <div id="url-error" className="error-card pixel-border" role="alert">
-            <strong>{errors[errorKind]?.[0] || 'ERROR'}</strong>
-            <p>{errors[errorKind]?.[1] || 'Something went wrong.'}</p>
+          <div id="url-error" className="error-card pixel-border p5-error-panel" role="alert">
+            <div className="p5-hazard-strip" aria-hidden="true" />
+            <div className="p5-error-content">
+              <strong className="p5-error-code font-display">{errors[errorKind]?.[0] || 'ERROR'}</strong>
+              <p className="p5-error-desc">{errors[errorKind]?.[1] || 'Something went wrong.'}</p>
+              <button
+                type="button"
+                onClick={reset}
+                className="p5-analyze-btn"
+                style={{ width: 'auto', padding: '0.45rem 1.25rem', fontSize: '1.05rem', marginTop: '0.5rem' }}
+              >
+                <span className="p5-analyze-btn-inner">TRY AGAIN // ESC</span>
+              </button>
+            </div>
           </div>
         ) : (
-          <p id="url-hint" className="url-hint">
+          <p id="url-hint" className="url-hint" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--p5-gray)', letterSpacing: '0.04em' }}>
             {phase === 'analyzing'
               ? 'Analyzing link...'
               : phase === 'preparing' || phase === 'downloading' || phase === 'processing'
@@ -311,25 +403,97 @@ export default function UrlInput({ onPhaseChange }) {
               : 'Paste a media link'}
           </p>
         )}
-        <div className="analyze-actions">
-          <button className="pixel-btn pixel-btn--full analyze-btn" type="submit" disabled={busy}>
-            <span className="btn-star pixel-star-twinkle" aria-hidden="true">✦</span>
-            {phase === 'analyzing'
-              ? 'ANALYZING...'
-              : phase === 'preparing' || phase === 'downloading' || phase === 'processing'
-              ? 'DOWNLOADING...'
-              : 'ANALYZE'}
-            <span className="btn-star pixel-star-twinkle" aria-hidden="true">✦</span>
-          </button>
-          {(url || phase !== 'idle') && <button className="clear-btn" type="button" onClick={reset}>Clear</button>}
+
+        <div className="analyze-actions" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <MagneticButton
+            type="submit"
+            disabled={busy}
+            badgeText={isReady ? 'STRIKE // 01' : 'INPUT REQUIRED'}
+            className="pixel-btn pixel-btn--full analyze-btn p5-analyze-btn"
+            style={{ width: '100%' }}
+          >
+            <span className="p5-analyze-btn-inner">
+              <span className="btn-star pixel-star-twinkle" aria-hidden="true">✦</span>
+              <GlitchText
+                text={
+                  phase === 'analyzing'
+                    ? 'ANALYZING...'
+                    : phase === 'preparing' || phase === 'downloading' || phase === 'processing'
+                    ? 'DOWNLOADING...'
+                    : 'ANALYZE'
+                }
+                className="font-display"
+                triggerKey={phase}
+              />
+              <span className="btn-star pixel-star-twinkle" aria-hidden="true">✦</span>
+            </span>
+          </MagneticButton>
+          {(url || phase !== 'idle') && <button className="clear-btn font-display" style={{ fontSize: '1.1rem', letterSpacing: '0.05em' }} type="button" onClick={reset}>Clear</button>}
         </div>
       </form>
+
+      {/* Kinetic Staged Analyzing Scene (Replaces spinner, maintains state-card & pixel-border for test compatibility) */}
       {phase === 'analyzing' && (
-        <div className="state-card pixel-border">
-          <p>ANALYZING LINK...</p>
-          <div className="activity-bar" aria-hidden="true"><span /></div>
+        <div className="state-card pixel-border p5-analyzing-panel" style={{ marginTop: '1.5rem' }}>
+          <HalftoneLayer opacity={0.06} dotColor="#E20B17" />
+          <div className="p5-analyzing-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <p className="p5-analyzing-title font-display">
+                ANALYZING LINK...
+              </p>
+              <span className="p5-analyzing-badge font-display">PHASE 8.8</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleAbort}
+              className="p5-analyzing-abort-btn"
+              aria-label="Abort analysis"
+            >
+              [ ABORT // 00 ]
+            </button>
+          </div>
+
+          <div className="p5-stepper">
+            <div className={`p5-step-item ${analyzingStep > 1 ? 'p5-step-item--done' : analyzingStep === 1 ? 'p5-step-item--active' : 'p5-step-item--pending'}`}>
+              <span>01 PARSING URL PROTOCOL</span>
+              <span className={`p5-step-marker ${analyzingStep === 1 ? 'p5-step-marker--active' : ''}`}>
+                {analyzingStep > 1 ? '✓' : analyzingStep === 1 ? '...' : '○'}
+              </span>
+            </div>
+            <div className={`p5-step-item ${analyzingStep > 2 ? 'p5-step-item--done' : analyzingStep === 2 ? 'p5-step-item--active' : 'p5-step-item--pending'}`}>
+              <span>02 SCANNING TARGET PLATFORM</span>
+              <span className={`p5-step-marker ${analyzingStep === 2 ? 'p5-step-marker--active' : ''}`}>
+                {analyzingStep > 2 ? '✓' : analyzingStep === 2 ? '...' : '○'}
+              </span>
+            </div>
+            <div className={`p5-step-item ${analyzingStep > 3 ? 'p5-step-item--done' : analyzingStep === 3 ? 'p5-step-item--active' : 'p5-step-item--pending'}`}>
+              <span>03 EXTRACTING MEDIA STREAMS</span>
+              <span className={`p5-step-marker ${analyzingStep === 3 ? 'p5-step-marker--active' : ''}`}>
+                {analyzingStep > 3 ? '✓' : analyzingStep === 3 ? '...' : '○'}
+              </span>
+            </div>
+            <div className={`p5-step-item ${analyzingStep === 4 ? 'p5-step-item--active' : 'p5-step-item--pending'}`}>
+              <span>04 BUILDING KINETIC RESULT</span>
+              <span className={`p5-step-marker ${analyzingStep === 4 ? 'p5-step-marker--active' : ''}`}>
+                {analyzingStep === 4 ? '...' : '○'}
+              </span>
+            </div>
+          </div>
+
+          {/* Progress & Scanning Bar (Preserves activity-bar class for test assertions) */}
+          <div className="p5-analyzing-progress-bar activity-bar" aria-hidden="true">
+            <span
+              className="p5-analyzing-progress-fill"
+              style={{ width: `${Math.min(100, analyzingStep * 25)}%` }}
+            />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--p5-gray)', transform: 'skewX(2deg)', marginTop: '0.25rem' }}>
+            <span>URL: {url.slice(0, 32)}{url.length > 32 ? '...' : ''}</span>
+            <span>{analyzingStep * 25}%</span>
+          </div>
         </div>
       )}
+
       {media && ['result', 'preparing', 'downloading', 'processing', 'success'].includes(phase) && (
         <ResultCard
           phase={phase}
@@ -342,6 +506,7 @@ export default function UrlInput({ onPhaseChange }) {
           onFormatChange={(next, initial) => { setFormat(next); setQuality(initial) }}
           onQualityChange={setQuality}
           onDownload={startDownload}
+          onCancelJob={cancelActiveDownload}
           onClear={reset}
         />
       )}

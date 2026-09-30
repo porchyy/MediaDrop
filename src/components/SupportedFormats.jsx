@@ -1,44 +1,103 @@
 import { Music, Video, Image } from 'lucide-react'
 
 const FORMATS = [
-  { icon: Music, label: 'MP3', desc: 'Audio', theme: 'audio' },
-  { icon: Video, label: 'Video', desc: 'MP4 / WebM', theme: 'video' },
-  { icon: Image, label: 'Image', desc: 'JPG / PNG', theme: 'image' },
+  { icon: Music, label: 'MP3', desc: 'Audio', theme: 'audio', accent: 'var(--accent-pink)' },
+  { icon: Video, label: 'Video', desc: 'MP4 / WebM', theme: 'video', accent: 'var(--accent-purple)' },
+  { icon: Image, label: 'Image', desc: 'JPG / PNG', theme: 'image', accent: 'var(--accent-cyan)' },
 ]
 
 export default function SupportedFormats({ isIdle = true }) {
   return (
-    <section className="supported-formats-section">
+    <section className="supported-formats-section" style={{ position: 'relative' }}>
       {/* Section label */}
-      <p className="formats-heading">
-        Media Formats
-      </p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+        <p className="formats-heading font-display" style={{ fontSize: '1.25rem', letterSpacing: '0.08em', color: 'var(--p5-white)', margin: 0 }}>
+          // SUPPORTED MEDIA ENGINES
+        </p>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--p5-gray)' }}>FORMAT / 03</span>
+      </div>
 
-      {/* Divider */}
-      <hr className="pixel-divider" />
+      {/* Divider with red slant */}
+      <hr className="pixel-divider" style={{ border: 'none', height: '2px', background: 'var(--p5-red)', marginBottom: '1.25rem' }} />
 
-      {/* Cards row */}
-      <div className="formats-grid">
-        {FORMATS.map(({ icon: Icon, label, desc, theme }) => (
-          <div key={label} className={`format-card format-card--${theme}`}>
-            <div className={`format-card-icon format-card-icon--${theme}`}>
-              <Icon size={20} color="#fff" strokeWidth={2} />
+      {/* Cards row with skew geometry */}
+      <div className="formats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.85rem' }}>
+        {FORMATS.map(({ icon: Icon, label, desc, theme, accent }) => (
+          <div
+            key={label}
+            className={`format-card format-card--${theme}`}
+            style={{
+              background: '#121212',
+              border: `2px solid ${accent}`,
+              boxShadow: '4px 4px 0 #000000',
+              padding: '1.1rem 0.75rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              transform: 'skewX(-4deg)',
+              transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+              cursor: 'default',
+            }}
+          >
+            <div
+              className={`format-card-icon format-card-icon--${theme}`}
+              style={{
+                background: accent,
+                padding: '0.45rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '0.5rem',
+                transform: 'skewX(4deg)',
+                boxShadow: '2px 2px 0 #000',
+              }}
+            >
+              <Icon size={20} color="#fff" strokeWidth={2.5} />
             </div>
-            <span className="format-card-label">{label}</span>
-            <span className="format-card-desc">{desc}</span>
+            <span className="format-card-label font-display" style={{ fontSize: '1.25rem', color: '#fff', transform: 'skewX(4deg)', lineHeight: 1 }}>
+              {label}
+            </span>
+            <span className="format-card-desc" style={{ fontSize: '0.72rem', color: 'var(--p5-gray)', transform: 'skewX(4deg)', marginTop: '0.25rem', fontFamily: 'monospace' }}>
+              {desc}
+            </span>
           </div>
         ))}
       </div>
 
       {/* Step Guide Strip (01 PASTE ➔ 02 PICK ➔ 03 DOWNLOAD) — Idle Mode Only */}
       {isIdle && (
-        <nav className="step-guide-strip" aria-label="Workflow guide">
-          <ol className="step-guide-list">
-            <li className="step-pill">01 PASTE</li>
-            <li className="step-arrow" aria-hidden="true">➔</li>
-            <li className="step-pill">02 PICK</li>
-            <li className="step-arrow" aria-hidden="true">➔</li>
-            <li className="step-pill">03 DOWNLOAD</li>
+        <nav className="step-guide-strip" aria-label="Workflow guide" style={{ marginTop: '1.75rem', display: 'flex', justifyContent: 'center' }}>
+          <ol
+            className="step-guide-list"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              background: '#121212',
+              border: '2px solid var(--p5-red)',
+              boxShadow: '4px 4px 0 #000000, 7px 7px 0 var(--p5-dark-red)',
+              padding: '0.45rem 1rem',
+              listStyle: 'none',
+              margin: 0,
+              transform: 'skewX(-4deg)',
+            }}
+          >
+            <li className="step-pill font-display" style={{ fontSize: '1.05rem', color: '#fff', transform: 'skewX(4deg)' }}>
+              01 PASTE
+            </li>
+            <li className="step-arrow" aria-hidden="true" style={{ color: 'var(--p5-red)', fontWeight: 'bold', transform: 'skewX(4deg)' }}>
+              ➔
+            </li>
+            <li className="step-pill font-display" style={{ fontSize: '1.05rem', color: '#fff', transform: 'skewX(4deg)' }}>
+              02 PICK
+            </li>
+            <li className="step-arrow" aria-hidden="true" style={{ color: 'var(--p5-red)', fontWeight: 'bold', transform: 'skewX(4deg)' }}>
+              ➔
+            </li>
+            <li className="step-pill font-display" style={{ fontSize: '1.05rem', color: '#fff', transform: 'skewX(4deg)' }}>
+              03 DOWNLOAD
+            </li>
           </ol>
         </nav>
       )}
