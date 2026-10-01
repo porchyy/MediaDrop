@@ -4,6 +4,8 @@ import Hero from './components/Hero'
 import UrlInput from './components/UrlInput'
 import SupportedFormats from './components/SupportedFormats'
 import Footer from './components/Footer'
+import CameraTransition from './components/kinetic/CameraTransition'
+import KineticFavicon from './components/kinetic/KineticFavicon'
 
 function App() {
   const [theme, setTheme] = useState(() => {
@@ -34,28 +36,38 @@ function App() {
   const toggleTheme = () => setTheme(t => (t === 'dark' ? 'light' : 'dark'))
 
   return (
-    <div className="app-container bg-depth-layer" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+    <div className="app-container bg-depth-layer" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', overflowX: 'hidden' }}>
+      {/* Persona 5 Metaverse Top Hazard Strip */}
+      <div className="p5-top-hazard-strip" aria-hidden="true" />
+
+      {/* Atmospheric Typographic Watermarks */}
+      <div className="p5-watermark-steal" aria-hidden="true">STEAL</div>
+      <div className="p5-watermark-heist" aria-hidden="true">HEIST</div>
+
+      <KineticFavicon phase={currentPhase} />
       <Header theme={theme} onToggle={toggleTheme} />
 
-      <main
-        className="main-content"
-        style={{
-          flex: 1,
-          maxWidth: '42.5rem',
-          margin: '0 auto',
-          width: '100%',
-          padding: '3rem 1.25rem 2rem',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '2.5rem',
-        }}
-      >
-        <Hero />
-        <UrlInput onPhaseChange={setCurrentPhase} />
-        {(currentPhase === 'idle' || currentPhase === 'error') && (
-          <SupportedFormats isIdle={currentPhase === 'idle'} />
-        )}
-      </main>
+      <CameraTransition phase={currentPhase} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <main
+          className="main-content"
+          style={{
+            flex: 1,
+            maxWidth: '46.5rem',
+            margin: '0 auto',
+            width: '100%',
+            padding: '2.5rem 1.25rem 2.5rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '2.25rem',
+          }}
+        >
+          <Hero />
+          <UrlInput onPhaseChange={setCurrentPhase} />
+          {(currentPhase === 'idle' || currentPhase === 'error') && (
+            <SupportedFormats isIdle={currentPhase === 'idle'} />
+          )}
+        </main>
+      </CameraTransition>
 
       <Footer />
     </div>

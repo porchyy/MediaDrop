@@ -8,6 +8,8 @@ import SlashTransition from './kinetic/SlashTransition'
 import ImpactFlash from './kinetic/ImpactFlash'
 import GlitchText from './kinetic/GlitchText'
 import HalftoneLayer from './kinetic/HalftoneLayer'
+import ScreenShake from './kinetic/ScreenShake'
+import P5DialogueBox from './kinetic/P5DialogueBox'
 
 export function isValidMediaUrl(value) {
   try {
@@ -43,6 +45,13 @@ export const errors = {
   too_large: ['FILE TOO LARGE', 'The file exceeds the maximum 500 MB limit.'],
   general: ['SOMETHING WENT WRONG', 'Please try again.'],
 }
+
+export const PRESETS = [
+  { label: '★ YOUTUBE 4K60', url: 'https://youtube.com/watch?v=phantom_shibuya_night_4k' },
+  { label: '★ TIKTOK NO-WM', url: 'https://tiktok.com/@phantom/video/tokyo_heist_dance' },
+  { label: '★ INSTA REEL', url: 'https://instagram.com/reel/cyber_aesthetic_reel' },
+  { label: '★ SOUNDCLOUD MP3', url: 'https://soundcloud.com/synth-heist/tokyo-velocity-ost' },
+]
 
 export default function UrlInput({ onPhaseChange }) {
   const [url, setUrl] = useState('')
@@ -323,125 +332,147 @@ export default function UrlInput({ onPhaseChange }) {
       <ImpactFlash trigger={impactTrigger} />
 
       <p className="sr-only" role="status">{announcement}</p>
-      <form onSubmit={analyze} noValidate className="analyze-form">
-        <div className="url-field p5-url-field">
-          <span className="url-input-icon" aria-hidden="true">
-            {isReady && <span className="url-valid-check" style={{ color: 'var(--accent-cyan)' }}>✓</span>}
-          </span>
-          <input
-            className="pixel-input p5-url-input"
-            type="url"
-            value={url}
-            onChange={event => updateUrl(event.target.value)}
-            disabled={busy}
-            aria-label="Media URL"
-            aria-describedby={phase === 'error' ? 'url-error' : 'url-hint'}
-            aria-invalid={errorKind === 'invalid'}
-            placeholder="Paste your media URL..."
-            spellCheck={false}
-            autoComplete="off"
-            style={{ paddingRight: '5.5rem', paddingLeft: '2.5rem' }}
-          />
-          <button
-            type="button"
-            onClick={handlePaste}
-            disabled={busy}
-            title="Paste from clipboard"
-            aria-label="Paste from clipboard"
-            className="paste-btn paste-btn--cyan"
-          >
-            <Clipboard size={14} />
-            <span className="paste-text font-display" style={{ fontSize: '1rem', letterSpacing: '0.05em' }}>PASTE</span>
-          </button>
-          {clipboardWarning && (
-            <span
-              className="kinetic-cursor-badge"
-              style={{
-                position: 'absolute',
-                top: '-1.85rem',
-                right: '0',
-                background: 'var(--p5-red)',
-                color: '#fff',
-                fontFamily: 'monospace',
-                fontSize: '0.75rem',
-                zIndex: 20,
-              }}
-            >
-              ↳ CLIPBOARD LOCKED // PASTE MANUALLY
-            </span>
-          )}
-        </div>
-
-        {phase === 'error' ? (
-          <div id="url-error" className="error-card pixel-border p5-error-panel" role="alert">
-            <div className="p5-hazard-strip" aria-hidden="true" />
-            <div className="p5-error-content">
-              <strong className="p5-error-code font-display">{errors[errorKind]?.[0] || 'ERROR'}</strong>
-              <p className="p5-error-desc">{errors[errorKind]?.[1] || 'Something went wrong.'}</p>
-              <button
-                type="button"
-                onClick={reset}
-                className="p5-analyze-btn"
-                style={{ width: 'auto', padding: '0.45rem 1.25rem', fontSize: '1.05rem', marginTop: '0.5rem' }}
-              >
-                <span className="p5-analyze-btn-inner">TRY AGAIN // ESC</span>
-              </button>
+      <ScreenShake trigger={impactTrigger}>
+        <form onSubmit={analyze} noValidate className="analyze-form">
+          {/* Persona 5 Slanted Target Console Header Badge */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
+            <div className="p5-target-badge" aria-hidden="true" style={{ margin: 0 }}>
+              <span className="p5-target-badge-bracket">[</span>
+              <span>TARGET URL // INFILTRATION CONSOLE</span>
+              <span className="p5-target-badge-bracket">]</span>
+            </div>
+            <div style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: 'var(--p5-gray)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <kbd style={{ background: 'var(--p5-red)', color: '#fff', padding: '0.1rem 0.35rem', border: '1px solid #000', fontWeight: 'bold' }}>Ctrl + V</kbd>
+              <span className="hidden sm:inline">PASTE SHORTCUT</span>
             </div>
           </div>
-        ) : (
-          <p id="url-hint" className="url-hint" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--p5-gray)', letterSpacing: '0.04em' }}>
-            {phase === 'analyzing'
-              ? 'Analyzing link...'
-              : phase === 'preparing' || phase === 'downloading' || phase === 'processing'
-              ? 'Downloading and processing media...'
-              : phase === 'result' || phase === 'success'
-              ? '✓ Media detected'
-              : isReady
-              ? '✓ Ready to analyze'
-              : url.trim()
-              ? 'Enter a full http(s) link'
-              : 'Paste a media link'}
-          </p>
-        )}
 
-        <div className="analyze-actions" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          <MagneticButton
-            type="submit"
-            disabled={busy}
-            badgeText={isReady ? 'STRIKE // 01' : 'INPUT REQUIRED'}
-            className="pixel-btn pixel-btn--full analyze-btn p5-analyze-btn"
-            style={{ width: '100%' }}
-          >
-            <span className="p5-analyze-btn-inner">
-              <span className="btn-star pixel-star-twinkle" aria-hidden="true">✦</span>
-              <GlitchText
-                text={
-                  phase === 'analyzing'
-                    ? 'ANALYZING...'
-                    : phase === 'preparing' || phase === 'downloading' || phase === 'processing'
-                    ? 'DOWNLOADING...'
-                    : 'ANALYZE'
-                }
-                className="font-display"
-                triggerKey={phase}
-              />
-              <span className="btn-star pixel-star-twinkle" aria-hidden="true">✦</span>
+          <div className="url-field p5-url-field">
+            <span className="url-input-icon" aria-hidden="true">
+              {isReady && <span className="url-valid-check" style={{ color: 'var(--accent-cyan)' }}>✓</span>}
             </span>
-          </MagneticButton>
-          {(url || phase !== 'idle') && <button className="clear-btn font-display" style={{ fontSize: '1.1rem', letterSpacing: '0.05em' }} type="button" onClick={reset}>Clear</button>}
-        </div>
-      </form>
+            <input
+              className="pixel-input p5-url-input"
+              type="url"
+              value={url}
+              onChange={event => updateUrl(event.target.value)}
+              disabled={busy}
+              aria-label="Media URL"
+              aria-describedby={phase === 'error' ? 'url-error' : 'url-hint'}
+              aria-invalid={errorKind === 'invalid'}
+              placeholder="Paste your media URL..."
+              spellCheck={false}
+              autoComplete="off"
+              style={{ paddingRight: '5.5rem', paddingLeft: '2.5rem' }}
+            />
+            <button
+              type="button"
+              onClick={handlePaste}
+              disabled={busy}
+              title="Paste from clipboard"
+              aria-label="Paste from clipboard"
+              className="paste-btn paste-btn--cyan"
+            >
+              <Clipboard size={14} />
+              <span className="paste-text font-display" style={{ fontSize: '0.95rem', letterSpacing: '0.05em' }}>INFILTRATE // PASTE</span>
+            </button>
+            {clipboardWarning && (
+              <span
+                className="kinetic-cursor-badge"
+                style={{
+                  position: 'absolute',
+                  top: '-1.85rem',
+                  right: '0',
+                  background: 'var(--p5-red)',
+                  color: '#fff',
+                  fontFamily: 'monospace',
+                  fontSize: '0.75rem',
+                  zIndex: 20,
+                }}
+              >
+                ↳ CLIPBOARD LOCKED // PASTE MANUALLY
+              </span>
+            )}
+          </div>
+
+          {/* Quick Slanted Preset Stickers (From Stitch Kinetic Heist Redesign) */}
+          <div className="p5-presets-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem', marginBottom: '1.45rem' }}>
+            <span style={{ fontFamily: 'monospace', fontSize: '0.72rem', fontWeight: 900, color: 'var(--p5-red)', marginRight: '0.2rem' }}>PRESETS:</span>
+            {PRESETS.map(preset => (
+              <button
+                key={preset.label}
+                type="button"
+                className="p5-preset-pill"
+                onClick={() => updateUrl(preset.url)}
+                disabled={busy}
+                title={`Load ${preset.label}`}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Persona 5 Comic Dialogue Box (Replaces flat url-hint and error panel) */}
+          <P5DialogueBox
+            id={phase === 'error' ? 'url-error' : 'url-hint'}
+            phase={phase}
+            isReady={isReady}
+            errorKind={errorKind}
+            errorMessage={errors[errorKind]}
+            onReset={reset}
+          />
+
+          <div className="analyze-actions" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center', marginTop: '0.35rem' }}>
+            <MagneticButton
+              type="submit"
+              disabled={busy}
+              badgeText={isReady ? 'ALL-OUT STRIKE // 01' : 'INPUT REQUIRED'}
+              className="pixel-btn pixel-btn--full analyze-btn p5-analyze-btn"
+              style={{ width: '100%' }}
+            >
+              <span className="p5-analyze-btn-inner">
+                <span className="sr-only" aria-hidden="true" style={{ display: 'none' }}>✦</span>
+                <span className="p5-btn-accent-slash" aria-hidden="true" style={{ color: 'var(--p5-red)', marginRight: '0.35rem', fontWeight: 900 }}>▶</span>
+                <GlitchText
+                  text={
+                    phase === 'analyzing'
+                      ? 'ANALYZING...'
+                      : phase === 'preparing' || phase === 'downloading' || phase === 'processing'
+                      ? 'DOWNLOADING...'
+                      : 'ALL-OUT STRIKE // ANALYZE'
+                  }
+                  className="font-display"
+                  triggerKey={phase}
+                />
+                <span className="p5-btn-accent-slash" aria-hidden="true" style={{ color: 'var(--p5-red)', marginLeft: '0.35rem', fontWeight: 900 }}>◀</span>
+              </span>
+            </MagneticButton>
+            {(url || phase !== 'idle') && (
+              <button
+                className="clear-btn font-display"
+                style={{ fontSize: '1rem', letterSpacing: '0.05em', marginTop: '0.35rem' }}
+                type="button"
+                onClick={reset}
+              >
+                [ RESET // 00 ]
+              </button>
+            )}
+          </div>
+        </form>
+      </ScreenShake>
 
       {/* Kinetic Staged Analyzing Scene (Replaces spinner, maintains state-card & pixel-border for test compatibility) */}
       {phase === 'analyzing' && (
-        <div className="state-card pixel-border p5-analyzing-panel" style={{ marginTop: '1.5rem' }}>
+        <div className="state-card pixel-border p5-analyzing-panel p5-analyzing-panel-3d p5-extrusion-card" style={{ marginTop: '1.5rem', position: 'relative', overflow: 'hidden' }}>
+          <div className="p5-scanner-beam" aria-hidden="true" />
+          <div className="p5-speed-lines" aria-hidden="true" />
           <HalftoneLayer opacity={0.06} dotColor="#E20B17" />
-          <div className="p5-analyzing-header">
+          <div className="p5-analyzing-header" style={{ position: 'relative', zIndex: 5 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <p className="p5-analyzing-title font-display">
                 ANALYZING LINK...
               </p>
-              <span className="p5-analyzing-badge font-display">PHASE 8.8</span>
+              <span className="p5-analyzing-badge font-display">PHASE 8.8.2.4.1</span>
             </div>
             <button
               type="button"

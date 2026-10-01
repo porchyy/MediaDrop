@@ -1,0 +1,91 @@
+/* ─── 3D Visual Effects, Specular Highlights & Screen Shake (Phase 8.8.2.4.1) ─────────── */
+
+/* ─── Micro Screen Shake (40ms - 80ms) ─── */
+.p5-screen-shake {
+  animation: p5-micro-shake 0.08s ease-in-out;
+}
+
+@keyframes p5-micro-shake {
+  0% { transform: translate3d(0, 0, 0); }
+  25% { transform: translate3d(-3px, 2px, 0) rotate(-0.4deg); }
+  50% { transform: translate3d(3px, -2px, 0) rotate(0.4deg); }
+  75% { transform: translate3d(-1px, 1px, 0) rotate(-0.2deg); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+/* ─── Specular Highlight Overlay (Follows Cursor) ─── */
+.p5-specular-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 10;
+  background: radial-gradient(
+    circle at var(--specular-x, 50%) var(--specular-y, 50%),
+    rgba(255, 255, 255, 0.18) 0%,
+    rgba(255, 255, 255, 0.05) 30%,
+    transparent 65%
+  );
+  opacity: var(--specular-opacity, 0);
+  transition: opacity 0.2s ease;
+  mix-blend-mode: overlay;
+}
+
+/* ─── 3D Hover Lift ─── */
+.p5-hover-lift {
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .p5-hover-lift:hover {
+    transform: translate3d(0, -6px, var(--p5-depth-lift));
+    box-shadow:
+      1px 1px 0 #000000,
+      3px 3px 0 var(--p5-dark-red),
+      6px 6px 0 #000000,
+      14px 14px 0 rgba(0, 0, 0, 0.9);
+  }
+}
+
+/* ─── 3D Lateral Entry Slam (Result Card reveal) ─── */
+@keyframes p5-card-slam {
+  0% {
+    opacity: 0;
+    transform: translate3d(50px, 20px, -80px) rotateY(-8deg) scale(0.95);
+  }
+  65% {
+    opacity: 1;
+    transform: translate3d(-4px, -2px, 15px) rotateY(2deg) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
+  }
+}
+
+.p5-entry-slam {
+  animation: p5-card-slam 0.42s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+/* ─── Calm Motion Suppression ─── */
+.motion-calm .p5-screen-shake,
+.motion-calm .p5-hover-lift,
+.motion-calm .p5-entry-slam,
+.motion-calm .p5-specular-sheen {
+  animation: none !important;
+  transform: none !important;
+  opacity: 0 !important;
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .p5-screen-shake,
+  .p5-hover-lift,
+  .p5-entry-slam,
+  .p5-specular-sheen {
+    animation: none !important;
+    transform: none !important;
+    opacity: 0 !important;
+    transition: none !important;
+  }
+}

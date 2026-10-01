@@ -1,0 +1,116 @@
+/* ─── 3D Kinetic Perspective & Depth System (Phase 8.8.2.4.1) ─────────── */
+
+:root {
+  --p5-perspective: 1200px;
+  --p5-transform-style: preserve-3d;
+  --p5-depth-bg: -200px;
+  --p5-depth-text: -50px;
+  --p5-depth-card: 0px;
+  --p5-depth-btn: 50px;
+  --p5-depth-lift: 20px;
+  --p5-depth-press: -8px;
+}
+
+/* 3D Camera Rig & Perspective Viewport */
+.p5-camera-rig {
+  perspective: var(--p5-perspective);
+  perspective-origin: center center;
+  transform-style: preserve-3d;
+  position: relative;
+  width: 100%;
+}
+
+.p5-preserve-3d {
+  transform-style: preserve-3d;
+}
+
+/* Layered Z-Planes */
+.depth-layer--bg {
+  transform: translate3d(0, 0, var(--p5-depth-bg));
+  transform-style: preserve-3d;
+}
+
+.depth-layer--text {
+  transform: translate3d(0, 0, var(--p5-depth-text));
+  transform-style: preserve-3d;
+}
+
+.depth-layer--surface {
+  transform: translate3d(0, 0, var(--p5-depth-card));
+  transform-style: preserve-3d;
+}
+
+.depth-layer--action {
+  transform: translate3d(0, 0, var(--p5-depth-btn));
+  transform-style: preserve-3d;
+}
+
+/* 3D Extrusion Shadows */
+.p5-extrusion-card {
+  box-shadow:
+    1px 1px 0 #000000,
+    2px 2px 0 #000000,
+    3px 3px 0 #000000,
+    4px 4px 0 var(--p5-red),
+    5px 5px 0 var(--p5-dark-red),
+    6px 6px 0 #000000,
+    10px 10px 0 rgba(0, 0, 0, 0.85);
+  transform-style: preserve-3d;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease;
+}
+
+.p5-extrusion-btn {
+  box-shadow:
+    1px 1px 0 #000000,
+    2px 2px 0 #000000,
+    3px 3px 0 var(--p5-dark-red),
+    4px 4px 0 #000000,
+    6px 6px 0 rgba(0, 0, 0, 0.9);
+  transform: translate3d(0, 0, var(--p5-depth-btn));
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s ease;
+}
+
+.p5-extrusion-btn:active {
+  transform: translate3d(0, 0, var(--p5-depth-press)) scale(0.98);
+  box-shadow:
+    1px 1px 0 #000000,
+    2px 2px 0 var(--p5-dark-red);
+}
+
+/* Desktop Only Parallax Rule */
+@media (hover: none), (pointer: coarse) {
+  .p5-parallax-interactive {
+    transform: none !important;
+  }
+}
+
+/* Calm Motion & Reduced Motion */
+.motion-calm .p5-camera-rig,
+.motion-calm .p5-preserve-3d,
+.motion-calm .depth-layer--bg,
+.motion-calm .depth-layer--text,
+.motion-calm .depth-layer--surface,
+.motion-calm .depth-layer--action,
+.motion-calm .p5-extrusion-card,
+.motion-calm .p5-extrusion-btn {
+  perspective: none !important;
+  transform: none !important;
+  transform-style: flat !important;
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .p5-camera-rig,
+  .p5-preserve-3d,
+  .depth-layer--bg,
+  .depth-layer--text,
+  .depth-layer--surface,
+  .depth-layer--action,
+  .p5-extrusion-card,
+  .p5-extrusion-btn {
+    perspective: none !important;
+    transform: none !important;
+    transform-style: flat !important;
+    transition: none !important;
+  }
+}

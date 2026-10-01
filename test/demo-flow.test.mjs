@@ -803,16 +803,203 @@ test('ResultCard renders packaging ZIP archiving state during multi-photo proces
   }
 })
 
+test('App renders 3D CameraTransition container and KineticFavicon', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { App } = await loadModules(server)
+    const html = renderToStaticMarkup(createElement(App))
+    assert.match(html, /p5-camera-rig/)
+    assert.match(html, /bg-depth-layer/)
+  } finally {
+    await server.close()
+  }
+})
 
+test('Hero renders 3D typography extrusion and depth layers', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { Hero } = await loadModules(server)
+    const html = renderToStaticMarkup(createElement(Hero))
+    assert.match(html, /p5-title-3d-wrapper/)
+    assert.match(html, /p5-title-3d-front/)
+    assert.match(html, /p5-title-3d-extrusion/)
+    assert.match(html, /depth-layer--text/)
+    assert.match(html, /depth-layer--bg/)
+  } finally {
+    await server.close()
+  }
+})
 
+test('ResultCard renders 3D PerspectiveCard with preserve-3d and specular highlight sheen', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { ResultCard } = await loadModules(server)
+    const media = {
+      title: 'Cinematic 3D Trailer',
+      duration: 120,
+      media_type: 'video',
+      thumbnail: 'https://example.com/thumb.jpg',
+      available_formats: ['video', 'audio'],
+    }
+    const html = renderToStaticMarkup(createElement(ResultCard, {
+      phase: 'result',
+      media,
+      platform: 'YouTube',
+      format: 'VIDEO',
+      quality: 'Best',
+    }))
+    assert.match(html, /p5-extrusion-card/)
+    assert.match(html, /p5-preserve-3d/)
+    assert.match(html, /p5-specular-sheen/)
+    assert.match(html, /p5-entry-slam/)
+    assert.match(html, /result-card/)
+  } finally {
+    await server.close()
+  }
+})
 
+// ── Phase 8.8.2.4.2: Persona 5 Authentic Dialogue & Interface Decluttering ──
 
+test('P5DialogueBox renders comic balloon with slanted speaker nameplate, Thai subtitles, and prompt indicator', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { default: P5DialogueBox } = await server.ssrLoadModule('/src/components/kinetic/P5DialogueBox.jsx')
+    const html = renderToStaticMarkup(createElement(P5DialogueBox, {
+      phase: 'idle',
+      isReady: false,
+    }))
+    assert.match(html, /p5-dialogue-wrapper/)
+    assert.match(html, /p5-dialogue-nameplate/)
+    assert.match(html, /NAVI \/\/ SYSTEM/)
+    assert.match(html, /p5-dialogue-balloon/)
+    assert.match(html, /INFILTRATION PROTOCOL: IDLE/)
+    assert.match(html, /p5-dialogue-thai/)
+    assert.match(html, /วางลิงก์สื่อเป้าหมาย/)
+    assert.match(html, /p5-prompt-indicator/)
+    assert.match(html, /NEXT/)
+  } finally {
+    await server.close()
+  }
+})
 
+test('P5DialogueBox renders cognitive distortion alert state with Thai explanation and retry button', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { default: P5DialogueBox } = await server.ssrLoadModule('/src/components/kinetic/P5DialogueBox.jsx')
+    const html = renderToStaticMarkup(createElement(P5DialogueBox, {
+      phase: 'error',
+      errorKind: 'invalid',
+      errorMessage: ['INVALID LINK', 'Please enter a valid HTTP or HTTPS URL.'],
+      onReset() {},
+    }))
+    assert.match(html, /p5-dialogue-balloon--alert/)
+    assert.match(html, /COGNITIVE DISTORTION \/\/ ALERT/)
+    assert.match(html, /INVALID LINK/)
+    assert.match(html, /Please enter a valid HTTP or HTTPS URL\./)
+    assert.match(html, /TRY AGAIN \/\/ ESC/)
+    assert.match(html, /p5-prompt-indicator--alert/)
+    assert.match(html, /RETRY/)
+  } finally {
+    await server.close()
+  }
+})
 
+test('UrlInput renders P5DialogueBox and Target URL Console badge with infiltrate and reset actions', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { UrlInput } = await loadModules(server)
+    const html = renderToStaticMarkup(createElement(UrlInput))
+    assert.match(html, /p5-target-badge/)
+    assert.match(html, /TARGET URL \/\/ INFILTRATION CONSOLE/)
+    assert.match(html, /p5-dialogue-wrapper/)
+    assert.match(html, /INFILTRATE \/\/ PASTE/)
+    assert.match(html, /ALL-OUT STRIKE \/\/ ANALYZE/)
+  } finally {
+    await server.close()
+  }
+})
 
+test('Hero renders SYS // 8.8.2.4.2 tag without legacy pixel dots', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { Hero } = await loadModules(server)
+    const html = renderToStaticMarkup(createElement(Hero))
+    assert.match(html, /SYS \/\/ 8\.8\.2\.4\.2/)
+    assert.doesNotMatch(html, /hero-dot/)
+  } finally {
+    await server.close()
+  }
+})
 
+test('Footer renders modernized Persona 5 slogan and tactical separators', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { Footer } = await loadModules(server)
+    const html = renderToStaticMarkup(createElement(Footer))
+    assert.match(html, /PHANTOM MEDIA ENGINE \/\/ TAKE YOUR MEDIA/)
+    assert.doesNotMatch(html, /footer-dot/)
+  } finally {
+    await server.close()
+  }
+})
 
+// ── Stitch Kinetic Heist Redesign Integration Tests ─────────────────────────
 
+test('HoldUpModal renders Persona 5 negotiation dialog with spec matrix and LFG button', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { default: HoldUpModal } = await server.ssrLoadModule('/src/components/kinetic/HoldUpModal.jsx')
+    const html = renderToStaticMarkup(createElement(HoldUpModal, {
+      isOpen: true,
+      title: 'SHIBUYA VELOCITY HEIST',
+      format: '4K MASTER MP4',
+      quality: 'Best',
+      fileSize: '1.82 GB',
+    }))
+    assert.match(html, /role="dialog"/)
+    assert.match(html, /HOLD UP!/)
+    assert.match(html, /HEIST NEGOTIATION/)
+    assert.match(html, /CONFIRM EXTRACTION\?/)
+    assert.match(html, /จะปล้นไฟล์นี้จริงดิ\?!/)
+    assert.match(html, /4K MASTER MP4/)
+    assert.match(html, /1\.82 GB/)
+    assert.match(html, /FALL BACK \/\/ ยกเลิก/)
+    assert.match(html, /LFG \/\/ ปล้นเลย!/)
+  } finally {
+    await server.close()
+  }
+})
+
+test('UrlInput renders quick preset sticker pills from Stitch redesign', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { UrlInput } = await loadModules(server)
+    const html = renderToStaticMarkup(createElement(UrlInput))
+    assert.match(html, /PRESETS:/)
+    assert.match(html, /★ YOUTUBE 4K60/)
+    assert.match(html, /★ TIKTOK NO-WM/)
+    assert.match(html, /★ INSTA REEL/)
+    assert.match(html, /★ SOUNDCLOUD MP3/)
+    assert.match(html, /p5-preset-pill/)
+  } finally {
+    await server.close()
+  }
+})
+
+test('Header renders Persona 5 Calendar & Weather widget and HOLD UP! // TEST button', async () => {
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+  try {
+    const { Header } = await loadModules(server)
+    const html = renderToStaticMarkup(createElement(Header, { theme: 'dark', onToggle: () => {} }))
+    assert.match(html, /p5-header-calendar/)
+    assert.match(html, /ภารกิจ/)
+    assert.match(html, /\d+\/\d+ \[[A-Z]{3}\]/)
+    assert.match(html, /SHIBUYA/)
+    assert.match(html, /HOLD UP! \/\/ TEST/)
+  } finally {
+    await server.close()
+  }
+})
 
 
 

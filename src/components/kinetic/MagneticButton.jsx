@@ -1,8 +1,10 @@
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState } from 'react'
+import { useKineticSound } from '../../hooks/useKineticSound'
+import { useMotionMode } from '../../hooks/useMotionMode'
 
 /**
- * MagneticButton: Adds subtle cursor pull (max 4-8px) to high-priority interactive buttons.
- * Channels Persona 5 snappy tactile feel.
+ * MagneticButton: Adds subtle cursor pull (max 4-8px) and physical 3D press depth to buttons.
+ * Channels Persona 5 snappy tactile feel with procedural audio clicks.
  * Bypassed when user has reduced motion preference or calm mode enabled.
  */
 export default function MagneticButton({
@@ -20,20 +22,8 @@ export default function MagneticButton({
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [isHovered, setIsHovered] = useState(false)
   const [isPressed, setIsPressed] = useState(false)
-  const [isCalm, setIsCalm] = useState(false)
-
-  useEffect(() => {
-    const checkCalm = () => {
-      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      const hasCalmClass = document.documentElement.classList.contains('motion-calm')
-      setIsCalm(prefersReduced || hasCalmClass)
-    }
-    checkCalm()
-
-    const observer = new MutationObserver(checkCalm)
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
-    return () => observer.disconnect()
-  }, [])
+  const { isCalm } = useMotionMode()
+  const { playClick } = useKineticSound()
 
   const handlePointerMove = e => {
     if (disabled || isCalm || !buttonRef.current) return
@@ -60,28 +50,37 @@ export default function MagneticButton({
   }
 
   const handlePointerDown = () => {
-    if (!disabled) setIsPressed(true)
+    if (!disabled) {
+      setIsPressed(true)
+      playClick()
+    }
   }
 
   const handlePointerUp = () => {
     setIsPressed(false)
   }
 
+  const handleClick = e => {
+    if (!disabled) {
+      onClick?.(e)
+    }
+  }
+
   const transformStyle = isCalm
     ? undefined
     : {
-        transform: `translate3d(${offset.x}px, ${offset.y}px, 0)${isPressed ? ' scale(0.97)' : ''}`,
-        transition: isHovered && !isPressed ? 'transform 0.08s ease-out' : 'transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1)',
+        transform: `translate3d(${offset.x}px, ${offset.y}px, ${isPressed ? 'var(--p5-depth-press)' : '0px'})${isPressed ? ' scale(0.97)' : ''}`,
+        transition: isHovered && !isPressed ? 'transform 0.08s ease-out' : 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
       }
 
   return (
-    <div className="magnetic-btn-wrapper" style={{ position: 'relative', display: 'inline-block', width: rest.style?.width || 'auto' }}>
+    <div className="magnetic-btn-wrapper p5-preserve-3d" style={{ position: 'relative', display: 'inline-block', width: rest.style?.width || 'auto' }}>
       <button
         ref={buttonRef}
         type={type}
-        className={`magnetic-btn ${isHovered ? 'magnetic-btn--hovered' : ''} ${isPressed ? 'magnetic-btn--pressed' : ''} ${className}`}
+        className={`magnetic-btn p5-extrusion-btn ${isHovered ? 'magnetic-btn--hovered' : ''} ${isPressed ? 'magnetic-btn--pressed' : ''} ${className}`}
         disabled={disabled}
-        onClick={onClick}
+        onClick={handleClick}
         onPointerMove={handlePointerMove}
         onPointerEnter={handlePointerEnter}
         onPointerLeave={handlePointerLeave}

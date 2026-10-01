@@ -6,6 +6,7 @@ import GlitchText from './kinetic/GlitchText'
 import StatusTag from './kinetic/StatusTag'
 import HalftoneLayer from './kinetic/HalftoneLayer'
 import LightboxModal from './kinetic/LightboxModal'
+import PerspectiveCard from './kinetic/PerspectiveCard'
 
 const FORMAT_DEFS = {
   MP3:       { icon: Music, heading: 'AUDIO QUALITY',     sublabel: 'AUDIO STREAM', choices: ['Best', '320 kbps', '192 kbps', '128 kbps'], initial: 'Best',     availKey: 'audio',     theme: 'audio', optionClass: 'result-option--pink'  },
@@ -96,18 +97,18 @@ export default function ResultCard({
   return (
     <section className="result-section p5-result-container" aria-label="Analysis result" style={{ position: 'relative' }}>
       <div className="card-decorations" aria-hidden="true" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-        <span className="card-star card-star--top pixel-star-twinkle" style={{ color: 'var(--p5-red)' }}>✦</span>
-        <span className="card-dot card-dot--bottom" style={{ color: 'var(--p5-gray)' }}>▪</span>
+        <span className="p5-geom-notch" style={{ color: 'var(--p5-red)', fontWeight: 900 }}>◆</span>
+        <span className="card-dot card-dot--bottom" style={{ color: 'var(--p5-gray)', fontFamily: 'monospace' }}>//</span>
       </div>
 
       <p className="result-heading font-display" ref={headingRef} style={{ fontSize: '1.4rem', letterSpacing: '0.08em', color: 'var(--p5-white)', margin: '0 0 0.5rem' }}>
         <GlitchText
-          text={phase === 'result' ? 'RESULT' : isWorking ? 'DOWNLOADING' : 'FILE READY'}
+          text={phase === 'result' ? 'TARGET SECURED // FILE DETECTED' : isWorking ? 'STEALING TREASURE // DOWNLOADING' : 'MISSION COMPLETE // GET FILE // FILE READY'}
           triggerKey={phase}
         />
       </p>
 
-      <div
+      <PerspectiveCard
         className={`result-card pixel-border-layered result-card--${themeKey} p5-result-card`}
         data-format-theme={themeKey}
       >
@@ -375,7 +376,7 @@ export default function ResultCard({
                   <div className="gallery-actions" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', marginTop: '0.5rem' }}>
                     {isCurrentVideo ? (
                       <MagneticButton
-                        badgeText="EXTRACT // VIDEO"
+                        badgeText="TAKE OVER // VIDEO"
                         className="pixel-btn pixel-btn--full download-cta download-cta--video p5-analyze-btn"
                         style={{ width: '100%', background: 'var(--accent-purple)', borderColor: '#fff' }}
                         onClick={() => onDownload?.({ format: 'video', quality: 'Best', output_format: 'original', image_index: imageIndex, download_all: false })}
@@ -387,7 +388,7 @@ export default function ResultCard({
                       </MagneticButton>
                     ) : (
                       <MagneticButton
-                        badgeText="EXTRACT // IMAGE"
+                        badgeText="TAKE OVER // IMAGE"
                         className={`pixel-btn pixel-btn--full download-cta download-cta--${themeKey} p5-analyze-btn`}
                         style={{ width: '100%' }}
                         onClick={() => onDownload?.({ output_format: quality.toLowerCase(), image_index: imageIndex, download_all: false })}
@@ -400,7 +401,7 @@ export default function ResultCard({
                     )}
                     {photosCount > 1 && (
                       <MagneticButton
-                        badgeText="BUNDLE // ZIP"
+                        badgeText="TAKE OVER // ALL (.ZIP)"
                         className="pixel-btn pixel-btn--full download-cta download-cta--zip p5-analyze-btn"
                         style={{ width: '100%', background: 'var(--accent-cyan)', color: '#000', borderColor: '#fff' }}
                         onClick={() => onDownload?.({ output_format: quality.toLowerCase(), download_all: true })}
@@ -420,7 +421,7 @@ export default function ResultCard({
                 ) : (
                   isCurrentVideo ? (
                     <MagneticButton
-                      badgeText="GET // VIDEO"
+                      badgeText="TAKE OVER // VIDEO"
                       className="pixel-btn pixel-btn--full download-cta download-cta--video p5-analyze-btn"
                       style={{ width: '100%', background: 'var(--accent-purple)' }}
                       onClick={() => onDownload?.({ format: 'video', quality: 'Best', output_format: 'original', image_index: 0, download_all: false })}
@@ -432,7 +433,7 @@ export default function ResultCard({
                     </MagneticButton>
                   ) : (
                     <MagneticButton
-                      badgeText="GET // IMAGE"
+                      badgeText="TAKE OVER // IMAGE"
                       className={`pixel-btn pixel-btn--full download-cta download-cta--${themeKey} p5-analyze-btn`}
                       style={{ width: '100%' }}
                       onClick={() => onDownload?.({ output_format: quality.toLowerCase(), image_index: 0, download_all: false })}
@@ -446,7 +447,7 @@ export default function ResultCard({
                 )
               ) : (
                 <MagneticButton
-                  badgeText={`GET // ${format}`}
+                  badgeText={`TAKE OVER // ${format}`}
                   className={`pixel-btn pixel-btn--full download-cta download-cta--${themeKey} p5-analyze-btn`}
                   style={{ width: '100%' }}
                   onClick={() => onDownload?.({
@@ -559,7 +560,8 @@ export default function ResultCard({
                     }}
                   >
                     <span style={{ transform: 'skewX(4deg)' }}>
-                      EXTRACT ANOTHER LINK // <span style={{ color: 'var(--p5-red)' }}>New Link</span>
+                      [ NEW INFILTRATION // <span style={{ color: 'var(--p5-red)' }}>ESC</span> ]
+                      <span className="sr-only"> (New Link)</span>
                     </span>
                   </button>
                 </div>
@@ -567,7 +569,7 @@ export default function ResultCard({
             </div>
           )}
         </div>
-      </div>
+      </PerspectiveCard>
 
       {/* High-Resolution Interactive Media Lightbox Modal */}
       <LightboxModal

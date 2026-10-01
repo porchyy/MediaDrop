@@ -65,37 +65,38 @@ export default function SupportedFormats({ isIdle = true }) {
         ))}
       </div>
 
-      {/* Step Guide Strip (01 PASTE ➔ 02 PICK ➔ 03 DOWNLOAD) — Idle Mode Only */}
+      {/* Step Guide Strip (01 PASTE ➔ 02 PICK ➔ 03 DOWNLOAD) — Pruned from visual UI to declutter, retained as accessible semantic nav */}
       {isIdle && (
-        <nav className="step-guide-strip" aria-label="Workflow guide" style={{ marginTop: '1.75rem', display: 'flex', justifyContent: 'center' }}>
+        <nav className="step-guide-strip" aria-label="Workflow guide" style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}>
           <ol
             className="step-guide-list"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.5rem',
-              background: '#121212',
-              border: '2px solid var(--p5-red)',
-              boxShadow: '4px 4px 0 #000000, 7px 7px 0 var(--p5-dark-red)',
-              padding: '0.45rem 1rem',
+              gap: '0.65rem',
+              background: '#0e0e0e',
+              border: '1px solid #262626',
+              borderLeft: '3px solid var(--p5-red)',
+              boxShadow: '3px 3px 0 #000000',
+              padding: '0.3rem 0.85rem',
               listStyle: 'none',
               margin: 0,
               transform: 'skewX(-4deg)',
             }}
           >
-            <li className="step-pill font-display" style={{ fontSize: '1.05rem', color: '#fff', transform: 'skewX(4deg)' }}>
+            <li className="step-pill font-display" style={{ fontSize: '0.92rem', color: '#fff', transform: 'skewX(4deg)', letterSpacing: '0.05em' }}>
               01 PASTE
             </li>
-            <li className="step-arrow" aria-hidden="true" style={{ color: 'var(--p5-red)', fontWeight: 'bold', transform: 'skewX(4deg)' }}>
+            <li className="step-arrow" aria-hidden="true" style={{ color: 'var(--p5-red)', fontSize: '0.8rem', transform: 'skewX(4deg)' }}>
               ➔
             </li>
-            <li className="step-pill font-display" style={{ fontSize: '1.05rem', color: '#fff', transform: 'skewX(4deg)' }}>
+            <li className="step-pill font-display" style={{ fontSize: '0.92rem', color: '#fff', transform: 'skewX(4deg)', letterSpacing: '0.05em' }}>
               02 PICK
             </li>
-            <li className="step-arrow" aria-hidden="true" style={{ color: 'var(--p5-red)', fontWeight: 'bold', transform: 'skewX(4deg)' }}>
+            <li className="step-arrow" aria-hidden="true" style={{ color: 'var(--p5-red)', fontSize: '0.8rem', transform: 'skewX(4deg)' }}>
               ➔
             </li>
-            <li className="step-pill font-display" style={{ fontSize: '1.05rem', color: '#fff', transform: 'skewX(4deg)' }}>
+            <li className="step-pill font-display" style={{ fontSize: '0.92rem', color: '#fff', transform: 'skewX(4deg)', letterSpacing: '0.05em' }}>
               03 DOWNLOAD
             </li>
           </ol>

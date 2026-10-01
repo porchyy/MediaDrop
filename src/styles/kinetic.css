@@ -1,0 +1,471 @@
+/* ─── 3D Kinetic Animations & Transitions (Phase 8.8.2.4.1) ─────────── */
+
+/* ─── 3D Slash Wipe 2.0 (Mask + Perspective + Motion Blur) ─── */
+.p5-slash-3d-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  pointer-events: none;
+  overflow: hidden;
+  perspective: 1000px;
+  transform-style: preserve-3d;
+}
+
+.p5-slash-3d-bar {
+  position: absolute;
+  top: -20%;
+  left: -30%;
+  width: 160%;
+  height: 140%;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(226, 11, 23, 0.95) 45%,
+    #E20B17 50%,
+    #8E0710 52%,
+    #080808 55%,
+    transparent 65%
+  );
+  transform: rotate(-12deg) translate3d(-100%, 0, 50px);
+  filter: drop-shadow(0 0 15px rgba(226, 11, 23, 0.6));
+  animation: p5-slash-3d-sweep 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.p5-slash-3d-bar--2 {
+  background: linear-gradient(105deg, transparent 40%, #080808 50%, rgba(226, 11, 23, 0.8) 55%, transparent 62%);
+  animation-delay: 0.05s;
+}
+
+.p5-slash-3d-bar--3 {
+  background: linear-gradient(105deg, transparent 46%, #E20B17 50%, #ffffff 51%, transparent 54%);
+  animation-delay: 0.09s;
+}
+
+@keyframes p5-slash-3d-sweep {
+  0% {
+    transform: rotate(-14deg) translate3d(-120%, 0, 80px) skewX(-10deg);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(-10deg) translate3d(120%, 0, -20px) skewX(5deg);
+    opacity: 0;
+  }
+}
+
+/* ─── 3D Staggered Typography Overshoot ─── */
+@keyframes p5-letter-overshoot {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 30px, -60px) rotateX(-45deg) scale(0.7);
+  }
+  70% {
+    opacity: 1;
+    transform: translate3d(0, -6px, 15px) rotateX(8deg) scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotateX(0deg) scale(1);
+  }
+}
+
+.p5-stagger-letter {
+  display: inline-block;
+  animation: p5-letter-overshoot 0.38s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards;
+  transform-style: preserve-3d;
+}
+
+/* ─── 3D Typography Layer Stacking (Extrusion & Highlight) ─── */
+.p5-title-3d-wrapper {
+  position: relative;
+  display: inline-block;
+  transform-style: preserve-3d;
+}
+
+.p5-title-3d-front {
+  position: relative;
+  color: var(--p5-white);
+  z-index: 3;
+  transform: translateZ(18px);
+  text-shadow:
+    2px 2px 0 var(--p5-red),
+    3px 3px 0 var(--p5-dark-red),
+    5px 5px 0 #000000,
+    7px 7px 0 #000000;
+}
+
+.p5-title-3d-extrusion,
+.p5-title-3d-shadow {
+  display: none !important;
+}
+
+/* ─── Camera Movement Keyframes ─── */
+.p5-camera-zoom-in {
+  animation: p5-cam-zoom 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.p5-camera-settle {
+  animation: p5-cam-settle 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes p5-cam-zoom {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.035) rotate(-1.2deg) translateZ(30px);
+  }
+  100% {
+    transform: scale(1.02) rotate(-0.6deg) translateZ(15px);
+  }
+}
+
+@keyframes p5-cam-settle {
+  0% {
+    transform: scale(1.02) rotate(-0.6deg) translateZ(15px);
+  }
+  100% {
+    transform: scale(1) rotate(0deg) translateZ(0);
+  }
+}
+
+/* ─── Comic Speed Lines Overlay ─── */
+.p5-speed-lines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 12px,
+    rgba(226, 11, 23, 0.04) 12px,
+    rgba(226, 11, 23, 0.04) 14px
+  );
+  z-index: 0;
+  opacity: 0.7;
+}
+
+/* ─── 3D Technical Scanner HUD & Beam ─── */
+.p5-scanner-beam {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, var(--p5-red) 50%, transparent 100%);
+  box-shadow: 0 0 10px var(--p5-red), 0 0 20px rgba(226, 11, 23, 0.5);
+  animation: p5-scanner-sweep 1.6s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 4;
+}
+
+@keyframes p5-scanner-sweep {
+  0% {
+    top: 5%;
+    opacity: 0.3;
+    transform: scaleX(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  100% {
+    top: 95%;
+    opacity: 0.4;
+    transform: scaleX(0.9);
+  }
+}
+
+.p5-analyzing-panel-3d {
+  transform: perspective(1000px) rotateX(1deg);
+  transform-style: preserve-3d;
+  box-shadow:
+    1px 1px 0 #000000,
+    3px 3px 0 var(--p5-dark-red),
+    5px 5px 0 #000000,
+    9px 9px 0 rgba(0, 0, 0, 0.85);
+  transition: transform 0.3s ease;
+}
+
+.motion-calm .p5-scanner-beam {
+  animation: none !important;
+  display: none !important;
+}
+
+.motion-calm .p5-analyzing-panel-3d {
+  transform: none !important;
+}
+
+/* ─── Persona 5 Comic Dialogue Box & Prompt Indicator (Phase 8.8.2.4.2) ─── */
+.p5-dialogue-wrapper {
+  position: relative;
+  width: 100%;
+  margin-bottom: 1.25rem;
+  transform-style: preserve-3d;
+}
+
+.p5-dialogue-balloon {
+  background: #0c0c0c;
+  border: 3px solid var(--p5-white, #F4F1E8);
+  box-shadow:
+    5px 5px 0 #000000,
+    9px 9px 0 var(--p5-dark-red, #8E0710);
+  padding: 1.15rem 1.4rem 1rem;
+  position: relative;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  transform: skewX(-2deg);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.p5-dialogue-balloon--alert {
+  border-color: var(--p5-red, #E20B17);
+  box-shadow:
+    5px 5px 0 #000000,
+    9px 9px 0 var(--p5-red, #E20B17);
+  background: linear-gradient(135deg, rgba(226, 11, 23, 0.15) 0%, #0c0c0c 65%);
+}
+
+.p5-dialogue-nameplate {
+  position: absolute;
+  top: -14px;
+  left: 14px;
+  background: var(--p5-red, #E20B17);
+  color: #ffffff;
+  padding: 0.18rem 0.65rem;
+  border: 2px solid #000000;
+  box-shadow: 3px 3px 0 #000000;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transform: skewX(-4deg);
+  z-index: 10;
+}
+
+.p5-dialogue-tail {
+  position: absolute;
+  bottom: -13px;
+  left: 36px;
+  width: 0;
+  height: 0;
+  border-left: 12px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 13px solid var(--p5-white, #F4F1E8);
+  filter: drop-shadow(4px 4px 0 #000000);
+  pointer-events: none;
+}
+
+.p5-dialogue-balloon--alert .p5-dialogue-tail {
+  border-top-color: var(--p5-red, #E20B17);
+}
+
+.p5-prompt-indicator {
+  position: absolute;
+  bottom: 8px;
+  right: 14px;
+  color: var(--p5-red, #E20B17);
+  font-size: 0.85rem;
+  animation: p5-prompt-pulse 0.85s ease-in-out infinite;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  user-select: none;
+}
+
+@keyframes p5-prompt-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.9) translateY(2px);
+  }
+}
+
+.p5-punch-in {
+  animation: p5-text-punch 0.15s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+@keyframes p5-text-punch {
+  0% {
+    opacity: 0;
+    transform: translate3d(-8px, 0, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.motion-calm .p5-dialogue-balloon {
+  clip-path: none !important;
+  transform: none !important;
+}
+
+.motion-calm .p5-dialogue-nameplate,
+.motion-calm .p5-punch-in,
+.motion-calm .p5-prompt-indicator,
+.motion-calm .p5-prompt-indicator--alert {
+  animation: none !important;
+  transform: none !important;
+}
+
+/* ─── Target URL Console Corner Badge & Actions (Phase 8.8.2.4.2) ─── */
+.p5-target-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #141414;
+  border-left: 3px solid var(--p5-red, #E20B17);
+  padding: 0.2rem 0.55rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  color: var(--p5-white, #F4F1E8);
+  letter-spacing: 0.08em;
+  margin-bottom: 0.45rem;
+  transform: skewX(-4deg);
+  box-shadow: 2px 2px 0 #000000;
+}
+
+.p5-target-badge-bracket {
+  color: var(--p5-red, #E20B17);
+  font-weight: bold;
+}
+
+.p5-prompt-indicator--alert {
+  animation: p5-prompt-alert-pulse 0.65s ease-in-out infinite;
+}
+
+@keyframes p5-prompt-alert-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(0.9);
+  }
+}
+
+.p5-retry-btn {
+  background: #180305 !important;
+  border: 1px solid var(--p5-red, #E20B17) !important;
+  color: #ffffff !important;
+  transform: skewX(-4deg);
+  box-shadow: 2px 2px 0 #000000 !important;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.p5-retry-btn:hover {
+  background: var(--p5-red, #E20B17) !important;
+  color: #000000 !important;
+}
+
+/* ─── Stitch Kinetic Heist Redesign Integration (Phase 8.8.2.4.2) ─── */
+.p5-shadow-combo {
+  box-shadow: 6px 6px 0 #000000, 12px 12px 0 var(--p5-red, #E20B17);
+}
+
+.p5-shadow-red {
+  box-shadow: 6px 6px 0 var(--p5-red, #E20B17);
+}
+
+.p5-shadow-black {
+  box-shadow: 6px 6px 0 #000000;
+}
+
+.p5-shadow-white {
+  box-shadow: 5px 5px 0 #ffffff;
+}
+
+.p5-top-hazard-strip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--p5-red, #E20B17), #ffffff, var(--p5-red, #E20B17));
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.p5-watermark-steal {
+  position: fixed;
+  right: -2rem;
+  top: 15%;
+  font-family: var(--font-display);
+  font-size: clamp(140px, 20vw, 280px);
+  color: #ffffff;
+  opacity: 0.035;
+  transform: rotate(-12deg);
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+  line-height: 0.8;
+}
+
+.p5-watermark-heist {
+  position: fixed;
+  left: -2rem;
+  bottom: 8%;
+  font-family: var(--font-display);
+  font-size: clamp(120px, 18vw, 240px);
+  color: var(--p5-red, #E20B17);
+  opacity: 0.035;
+  transform: rotate(6deg);
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+  line-height: 0.8;
+}
+
+.p5-preset-pill {
+  cursor: pointer;
+  padding: 0.25rem 0.6rem;
+  background: #111114;
+  color: var(--p5-white, #F4F1E8);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+  transform: skewX(-4deg);
+  box-shadow: 2px 2px 0 #000;
+  transition: all 0.15s ease;
+}
+
+.p5-preset-pill:hover {
+  background: var(--p5-red, #E20B17);
+  color: #ffffff;
+  border-color: #000000;
+  transform: skewX(-4deg) translateY(-1px);
+  box-shadow: 3px 3px 0 #000000;
+}
+
+.p5-header-calendar {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .p5-header-calendar {
+    display: flex;
+  }
+}
+
+.motion-calm .p5-watermark-steal,
+.motion-calm .p5-watermark-heist {
+  display: none !important;
+}
+
+.motion-calm .p5-preset-pill,
+.motion-calm .p5-header-calendar {
+  transform: none !important;
+}
+
