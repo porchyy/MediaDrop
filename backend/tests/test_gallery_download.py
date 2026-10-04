@@ -287,6 +287,7 @@ async def test_download_instagram_carousel_video_item_renames_cleanly(manager: J
 
     with patch("app.gallery_extractor.InstagramAdapter.extract", new_callable=AsyncMock) as mock_extract, \
          patch("app.downloader.is_safe_url", return_value=True), \
+         patch("app.downloader.verify_file"), \
          patch("httpx.AsyncClient.stream") as mock_stream:
         mock_extract.return_value = fake_res
         mock_stream.return_value.__aenter__.return_value = mock_resp

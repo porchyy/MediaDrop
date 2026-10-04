@@ -2,7 +2,7 @@ import json
 import shutil
 import time
 import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +17,7 @@ class Job:
     output_format: str = "original"
     image_index: int = 0
     download_all: bool = False
-    status: str = "queued"  # queued, downloading, processing, ready, failed, cancelled, expired
+    status: str = "queued"  # queued, extracting, resolving, downloading, retrying, resuming, verifying, processing, ready, failed, cancelled, expired
     progress: float | None = None
     downloaded_bytes: int = 0
     total_bytes: int | None = None
@@ -27,13 +27,21 @@ class Job:
     created_at: float = 0.0
     error: str | None = None
     error_code: str | None = None
+    retry_count: int = 0
+    current_attempt: int = 1
+    current_stage: str | None = None
+    transfer_mode: str | None = None
+    resumed_from_bytes: int = 0
+    warnings: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Job":
-        return cls(**data)
+        allowed = {f.name for f in fields(cls)}
+        filtered = {k: v for k, v in data.items() if k in allowed}
+        return cls(**filtered)
 
 
 class JobManager:

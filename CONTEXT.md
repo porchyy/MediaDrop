@@ -168,3 +168,18 @@ Cookie file format Netscape ของบัญชี Instagram เฉพาะ M
 
 **Tactical Heist Phrasing**:
 ชุดคำศัพท์ที่ใช้ในวงจรการทำงานของ Result Card ที่สะท้อนความสำเร็จของภารกิจ (`TARGET SECURED`, `TAKE OVER`, `MISSION COMPLETE`)
+
+**Extracting**:
+(สำหรับ Phase 8) ขั้นตอนการดึง Metadata และข้อมูลเริ่มต้น สำหรับเครื่องมืออย่าง `yt-dlp` ขั้นตอนนี้รวมการทำ URL resolution ไว้ด้วยในตัว
+
+**Resolving**:
+(สำหรับ Phase 8) ขั้นตอนการแปลหน้าเว็บเพจหรือ URL แบบ canonical ให้เป็นลิงก์ไฟล์สื่อโดยตรง (Direct media URL) มักใช้แยกจาก Extracting ในกรณีที่เป็น Custom Extractor (เช่น Tiktok photo galleries)
+
+**ReliableDownloader**:
+(สำหรับ Phase 8) โมดูลสำหรับจัดการ HTTP Transfer โดยเฉพาะ รับผิดชอบเรื่องการเชื่อมต่อ, Retry, Backoff, Resume และ Partial file (`.part`) โดยไม่สนใจว่าไฟล์นั้นคือไฟล์ภาพหรือวิดีโอ (ไม่มีหน้าที่ตรวจสอบเนื้อหา)
+
+**SourceExpiredError**:
+(สำหรับ Phase 8) Exception ที่ถูกโยนออกมาโดย `ReliableDownloader` เมื่อ URL ของสื่อที่กำลังดาวน์โหลดเกิดหมดอายุกลางคัน (เช่น HTTP 403) เป็นสัญญาณบอก Job Worker ให้ทำการดึง URL (Extract/Resolve) ใหม่อีกครั้ง
+
+**Partial Gallery Result**:
+(สำหรับ Phase 8) สถานะของ Job แบบโหลดกลุ่ม (Gallery) ที่บางไฟล์สำเร็จและบางไฟล์ไม่สำเร็จถาวร Job จะถูกปรับสถานะเป็น `ready` พร้อมคืนค่าไฟล์ ZIP ที่รวมเฉพาะรูปที่สำเร็จ พร้อมแนบฟิลด์เตือนข้อผิดพลาด (เช่น `warnings`) ใน Metadata

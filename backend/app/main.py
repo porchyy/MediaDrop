@@ -385,6 +385,10 @@ def get_job_status(job_id: str):
         "filename": job.filename,
         "error": job.error,
         "error_code": job.error_code,
+        "stage": job.current_stage or job.status,
+        "retry_count": job.retry_count,
+        "transfer_mode": job.transfer_mode,
+        "warnings": job.warnings,
     }
 
 

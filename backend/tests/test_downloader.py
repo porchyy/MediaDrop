@@ -39,18 +39,26 @@ class DownloaderTest(unittest.TestCase):
         self.assertEqual(opts_best["postprocessors"][0]["preferredquality"], "0")
 
     def test_direct_file_download_success(self):
+        import io
+        from PIL import Image
+
         job = self.manager.create_job(url="https://example.com/test.jpg", format="image", quality="Original")
+
+        buf = io.BytesIO()
+        Image.new("RGB", (20, 20), (255, 0, 0)).save(buf, format="JPEG")
+        fake_bytes = buf.getvalue()
 
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.headers = {
-            "Content-Length": "100",
+            "Content-Length": str(len(fake_bytes)),
             "Content-Disposition": 'attachment; filename="my_photo.jpg"',
         }
 
         async def fake_aiter_bytes(*args, **kwargs):
-            yield b"x" * 50
-            yield b"y" * 50
+            half = len(fake_bytes) // 2
+            yield fake_bytes[:half]
+            yield fake_bytes[half:]
 
         mock_response.aiter_bytes = fake_aiter_bytes
 
@@ -70,7 +78,7 @@ class DownloaderTest(unittest.TestCase):
         updated = self.manager.get_job(job.job_id)
         self.assertEqual(updated.status, "ready")
         self.assertEqual(updated.filename, "my_photo.jpg")
-        self.assertEqual(updated.file_size, 100)
+        self.assertEqual(updated.file_size, len(fake_bytes))
         self.assertTrue(Path(updated.file_path).exists())
 
     def test_direct_file_download_exceeds_max_size(self):
